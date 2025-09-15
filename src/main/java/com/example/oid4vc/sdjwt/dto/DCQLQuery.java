@@ -20,21 +20,21 @@ import java.util.Map;
 @AllArgsConstructor
 @Builder
 @JsonInclude(JsonInclude.Include.NON_NULL)
-@Schema(description = "DCQL Query object as defined in OpenID4VP 1.0 Section 6")
+//@Schema(description = "DCQL Query object as defined in OpenID4VP 1.0 Section 6")
 public class DCQLQuery {
 
   @JsonProperty("credentials")
-  @Schema(description = "Array of Credential Queries", required = true)
+  //@Schema(description = "Array of Credential Queries", required = true)
   private List<CredentialQuery> credentials;
 
   @JsonProperty("credential_sets")
   @JsonInclude(JsonInclude.Include.NON_EMPTY)
-  @Schema(description = "Array of credential set queries for additional constraints")
+  //@Schema(description = "Array of credential set queries for additional constraints")
   private List<CredentialSet> credentialSets;
 
   @JsonProperty("transaction_data")
   @JsonInclude(JsonInclude.Include.NON_EMPTY)
-  @Schema(description = "Transaction data for authorization")
+  //Schema(description = "Transaction data for authorization")
   private List<Map<String, Object>> transactionData;
 
   /**
@@ -48,34 +48,34 @@ public class DCQLQuery {
   public static class CredentialQuery {
 
     @JsonProperty("id")
-    @Schema(description = "Unique identifier for this credential query", required = true)
+    //@Schema(description = "Unique identifier for this credential query", required = true)
     private String id;
 
     @JsonProperty("format")
-    @Schema(description = "Credential format", example = "jwt_vc_json")
+    //@Schema(description = "Credential format", example = "jwt_vc_json")
     private String format;
 
     @JsonProperty("meta")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    @Schema(description = "Format-specific metadata")
+    //@Schema(description = "Format-specific metadata")
     private Map<String, Object> meta;
 
     @JsonProperty("claims")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    @Schema(description = "Array of claim queries")
+    //@Schema(description = "Array of claim queries")
     private List<ClaimQuery> claims;
 
     @JsonProperty("claim_sets")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    @Schema(description = "Array of claim set queries")
+    //@Schema(description = "Array of claim set queries")
     private List<ClaimSet> claimSets;
 
     @JsonProperty("purpose")
-    @Schema(description = "Purpose of the credential request")
+    //@Schema(description = "Purpose of the credential request")
     private String purpose;
 
     @JsonProperty("require_cryptographic_holder_binding")
-    @Schema(description = "Whether cryptographic holder binding is required", defaultValue = "true")
+    //@Schema(description = "Whether cryptographic holder binding is required", defaultValue = "true")
     private Boolean requireCryptographicHolderBinding;
   }
 
@@ -90,32 +90,32 @@ public class DCQLQuery {
   public static class ClaimQuery {
 
     @JsonProperty("id")
-    @Schema(description = "Unique identifier for this claim query")
+    //@Schema(description = "Unique identifier for this claim query")
     private String id;
 
     @JsonProperty("path")
-    @Schema(description = "JSON path to the claim", required = true)
+    //@Schema(description = "JSON path to the claim", required = true)
     private List<Object> path;
 
     @JsonProperty("purpose")
-    @Schema(description = "Purpose of requesting this claim")
+    //@Schema(description = "Purpose of requesting this claim")
     private String purpose;
 
     @JsonProperty("values")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    @Schema(description = "Acceptable values for the claim")
+    //@Schema(description = "Acceptable values for the claim")
     private List<Object> values;
 
     @JsonProperty("value")
-    @Schema(description = "Single acceptable value for the claim")
+    //@Schema(description = "Single acceptable value for the claim")
     private Object value;
 
     @JsonProperty("max")
-    @Schema(description = "Maximum value (inclusive)")
+    //@Schema(description = "Maximum value (inclusive)")
     private Object max;
 
     @JsonProperty("min")
-    @Schema(description = "Minimum value (inclusive)")
+    //@Schema(description = "Minimum value (inclusive)")
     private Object min;
   }
 
@@ -130,16 +130,16 @@ public class DCQLQuery {
   public static class ClaimSet {
 
     @JsonProperty("id")
-    @Schema(description = "Unique identifier for this claim set", required = true)
+    //@Schema(description = "Unique identifier for this claim set", required = true)
     private String id;
 
     @JsonProperty("claims")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    @Schema(description = "Array of claim queries in this set", required = true)
+    //@Schema(description = "Array of claim queries in this set", required = true)
     private List<ClaimQuery> claims;
 
     @JsonProperty("purpose")
-    @Schema(description = "Purpose of this claim set")
+    //@Schema(description = "Purpose of this claim set")
     private String purpose;
   }
 
@@ -154,16 +154,16 @@ public class DCQLQuery {
   public static class CredentialSet {
 
     @JsonProperty("id")
-    @Schema(description = "Unique identifier for this credential set", required = true)
+    //@Schema(description = "Unique identifier for this credential set", required = true)
     private String id;
 
     @JsonProperty("options")
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    @Schema(description = "Array of arrays containing credential IDs", required = true)
+    //@Schema(description = "Array of arrays containing credential IDs", required = true)
     private List<List<String>> options;
 
     @JsonProperty("purpose")
-    @Schema(description = "Purpose of this credential set")
+    //@Schema(description = "Purpose of this credential set")
     private String purpose;
   }
 }
