@@ -206,9 +206,9 @@ README.html
 **/*.log
 !**/did-*.jar
 !**/opendid-*.jar
-/source/did-op-server/files/**
-!source/did-op-server/gradle/wrapper/gradle-wrapper.jar
-!source/did-op-server/src/main/resources/static/**
+/files/**
+!/gradle/wrapper/gradle-wrapper.jar
+!/src/main/resources/static/**
 
 ### react ###
 .DS_*
