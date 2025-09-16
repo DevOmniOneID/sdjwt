@@ -22,35 +22,60 @@ public class RSASSAVerifier implements JWSVerifier {
         
         byte[] signatureBytes = signedJWT.getSignatureBytes();
         
-        // RSA signatures are typically consistent across platforms (PKCS#1 v1.5 padding)
-        // However, we add format detection for future compatibility and robustness
+        // For SD-JWT standard compliance, expect consistent RSA signature format
+        // RSA signatures should match the key size (PKCS#1 v1.5 padding)
         
-        // For RSA-2048, signature should be 256 bytes
-        // For RSA-3072, signature should be 384 bytes  
-        // For RSA-4096, signature should be 512 bytes
         int keySize = publicKey.getModulus().bitLength();
         int expectedSignatureLength = keySize / 8;
         
         if (signatureBytes.length == expectedSignatureLength) {
             // Standard RSA signature format - verify directly
             return signature.verify(signatureBytes);
+        } else if (signatureBytes.length < expectedSignatureLength) {
+            // Handle potential missing leading zeros - pad and verify
+            byte[] paddedSignature = padToExpectedLength(signatureBytes, expectedSignatureLength);
+            return signature.verify(paddedSignature);
         } else if (isValidDERSequence(signatureBytes)) {
-            // Handle potential DER-wrapped RSA signatures (rare but possible)
+            // Handle potential DER-wrapped RSA signatures (for backward compatibility)
             byte[] extractedSignature = extractSignatureFromDER(signatureBytes);
             if (extractedSignature.length == expectedSignatureLength) {
                 return signature.verify(extractedSignature);
             }
         }
         
-        // Fallback: try direct verification (backwards compatibility)
+        // Fallback: try direct verification for legacy compatibility
         try {
             return signature.verify(signatureBytes);
         } catch (Exception e) {
             // Log the issue for debugging but don't fail immediately
             System.err.println("RSA signature verification failed with unexpected format. " +
-                "Expected length: " + expectedSignatureLength + ", Actual length: " + signatureBytes.length);
+                "Expected length: " + expectedSignatureLength + ", Actual length: " + signatureBytes.length +
+                " (SD-JWT standard expects consistent RSA signature format)");
             return false;
         }
+    }
+
+    /**
+     * Pad signature to expected length with leading zeros.
+     * This ensures SD-JWT standard compliance for RSA signatures.
+     *
+     * @param signatureBytes Original signature bytes
+     * @param expectedLength Expected signature length
+     * @return Padded signature
+     */
+    private byte[] padToExpectedLength(byte[] signatureBytes, int expectedLength) {
+        byte[] padded = new byte[expectedLength];
+        int paddingLength = expectedLength - signatureBytes.length;
+        
+        // Fill with leading zeros
+        for (int i = 0; i < paddingLength; i++) {
+            padded[i] = 0;
+        }
+        
+        // Copy original signature
+        System.arraycopy(signatureBytes, 0, padded, paddingLength, signatureBytes.length);
+        
+        return padded;
     }
 
     /**
