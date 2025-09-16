@@ -1,6 +1,7 @@
 package com.example.oid4vc.sdjwt.keybinding;
 
 import com.nimbusds.jose.JOSEException;
+import com.example.oid4vc.sdjwt.exception.SDJWTException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSSigner;
@@ -83,57 +84,61 @@ public class KeyBindingJWTBuilder {
   /**
    * Build and sign the Key Binding JWT.
    */
-  public String build() throws JOSEException {
-    // Determine algorithm based on key type
-    JWSAlgorithm algorithm;
-    JWSSigner signer;
+  public String build() throws SDJWTException {
+    try {
+      // Determine algorithm based on key type
+      JWSAlgorithm algorithm;
+      JWSSigner signer;
 
-    if (holderKey instanceof RSAPrivateKey) {
-      algorithm = JWSAlgorithm.RS256;
-      signer = new RSASSASigner((RSAPrivateKey) holderKey);
-    } else if (holderKey instanceof ECPrivateKey) {
-      algorithm = JWSAlgorithm.ES256;
-      signer = new ECDSASigner((ECPrivateKey) holderKey);
-    } else {
-      throw new IllegalArgumentException("Unsupported private key type: " + holderKey.getClass());
+      if (holderKey instanceof RSAPrivateKey) {
+        algorithm = JWSAlgorithm.RS256;
+        signer = new RSASSASigner((RSAPrivateKey) holderKey);
+      } else if (holderKey instanceof ECPrivateKey) {
+        algorithm = JWSAlgorithm.ES256;
+        signer = new ECDSASigner((ECPrivateKey) holderKey);
+      } else {
+        throw new IllegalArgumentException("Unsupported private key type: " + holderKey.getClass());
+      }
+
+      // Create header
+      JWSHeader header = new JWSHeader.Builder(algorithm)
+          .type(new com.nimbusds.jose.JOSEObjectType("kb+jwt"))
+          .build();
+
+      // Create claims
+      JWTClaimsSet.Builder claimsBuilder = new JWTClaimsSet.Builder();
+
+      if (audience != null) {
+        claimsBuilder.audience(audience);
+      }
+
+      if (nonce != null) {
+        claimsBuilder.claim("nonce", nonce);
+      }
+
+      if (issuedAt != null) {
+        claimsBuilder.issueTime(Date.from(issuedAt));
+      }
+
+      // Add additional claims
+      additionalClaims.forEach(claimsBuilder::claim);
+
+      JWTClaimsSet claims = claimsBuilder.build();
+
+      // Create and sign JWT
+      SignedJWT signedJWT = new SignedJWT(header, claims);
+      signedJWT.sign(signer);
+
+      return signedJWT.serialize();
+    } catch (JOSEException e) {
+      throw new SDJWTException("Failed to create key binding JWT", e);
     }
-
-    // Create header
-    JWSHeader header = new JWSHeader.Builder(algorithm)
-        .type(new com.nimbusds.jose.JOSEObjectType("kb+jwt"))
-        .build();
-
-    // Create claims
-    JWTClaimsSet.Builder claimsBuilder = new JWTClaimsSet.Builder();
-
-    if (audience != null) {
-      claimsBuilder.audience(audience);
-    }
-
-    if (nonce != null) {
-      claimsBuilder.claim("nonce", nonce);
-    }
-
-    if (issuedAt != null) {
-      claimsBuilder.issueTime(Date.from(issuedAt));
-    }
-
-    // Add additional claims
-    additionalClaims.forEach(claimsBuilder::claim);
-
-    JWTClaimsSet claims = claimsBuilder.build();
-
-    // Create and sign JWT
-    SignedJWT signedJWT = new SignedJWT(header, claims);
-    signedJWT.sign(signer);
-
-    return signedJWT.serialize();
   }
 
   /**
    * Static helper method to create a Key Binding JWT (backward compatibility).
    */
-  public static String createKeyBindingJWT(PrivateKey holderKey, String audience, String nonce) throws JOSEException {
+  public static String createKeyBindingJWT(PrivateKey holderKey, String audience, String nonce) throws SDJWTException {
     return new KeyBindingJWTBuilder(holderKey)
         .audience(audience)
         .nonce(nonce)
@@ -148,9 +153,9 @@ public class KeyBindingJWTBuilder {
    * @param nonce Unique nonce for replay protection
    * @param sdJwtString SD-JWT string (without Key Binding JWT) for hash calculation
    * @return Serialized Key Binding JWT with sd_hash claim
-   * @throws JOSEException if JWT creation or signing fails
+   * @throws SDJWTException if JWT creation or signing fails
    */
-  public static String createKeyBindingJWT(PrivateKey holderKey, String audience, String nonce, String sdJwtString) throws JOSEException {
+  public static String createKeyBindingJWT(PrivateKey holderKey, String audience, String nonce, String sdJwtString) throws SDJWTException {
     String sdHash = calculateSdHash(sdJwtString);
     
     return new KeyBindingJWTBuilder(holderKey)

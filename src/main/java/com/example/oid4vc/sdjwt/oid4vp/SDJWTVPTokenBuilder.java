@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.nimbusds.jose.JOSEException;
+import com.example.oid4vc.sdjwt.exception.SDJWTException;
 import lombok.extern.slf4j.Slf4j;
 
 import java.security.PrivateKey;
@@ -185,7 +186,7 @@ public class SDJWTVPTokenBuilder {
       String vpTokenString = createVPTokenString();
       return createVPTokenStructure(vpTokenString);
 
-    } catch (JOSEException e) {
+    } catch (SDJWTException e) {
       log.error("JOSE error during VP Token creation", e);
       throw new RuntimeException("VP Token creation failed due to JOSE error: " + e.getMessage(), e);
     } catch (Exception e) {
@@ -250,7 +251,7 @@ public class SDJWTVPTokenBuilder {
 
       return createMultipleVPTokenStructure(vpTokenStrings);
 
-    } catch (JOSEException e) {
+    } catch (SDJWTException e) {
       log.error("JOSE error during multiple VP Token creation", e);
       throw new RuntimeException("Multiple VP Token creation failed due to JOSE error: " + e.getMessage(), e);
     } catch (Exception e) {
@@ -289,7 +290,7 @@ public class SDJWTVPTokenBuilder {
     return new HashSet<>();
   }
 
-  private String createVPTokenString() throws JOSEException {
+  private String createVPTokenString() throws SDJWTException {
     if (fullDisclosure) {
       log.debug("Creating VP token with full disclosure");
       return OID4VPHandler.createFullVPToken(sdJwtVC, holderPrivateKey, audience, nonce);

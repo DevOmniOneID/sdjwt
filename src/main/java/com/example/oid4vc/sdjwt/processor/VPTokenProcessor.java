@@ -8,6 +8,7 @@ import com.example.oid4vc.sdjwt.oid4vp.VPTokenGenerator;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.JOSEException;
+import com.example.oid4vc.sdjwt.exception.SDJWTException;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
@@ -219,7 +220,7 @@ public class VPTokenProcessor {
 
       return result;
 
-    } catch (JOSEException e) {
+    } catch (SDJWTException e) {
       log.error("JOSE error during SD-JWT VP token creation", e);
       return VPTokenResult.failure("Key binding JWT creation failed", e);
     } catch (Exception e) {

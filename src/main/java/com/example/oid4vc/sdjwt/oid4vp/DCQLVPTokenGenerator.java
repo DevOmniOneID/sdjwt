@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.nimbusds.jose.JOSEException;
+import com.example.oid4vc.sdjwt.exception.SDJWTException;
 import lombok.extern.slf4j.Slf4j;
 
 import java.security.PrivateKey;
@@ -54,7 +55,7 @@ public class DCQLVPTokenGenerator {
       // OpenID4VP 구조로 래핑
       return wrapSingleCredentialVPToken(credentialId, vpTokenString);
 
-    } catch (JOSEException e) {
+    } catch (SDJWTException e) {
       log.error("JOSE error during DCQL VP token generation", e);
       throw new RuntimeException("Key binding JWT creation failed: " + e.getMessage(), e);
     } catch (Exception e) {
@@ -290,8 +291,8 @@ public class DCQLVPTokenGenerator {
       log.info("Generated {} presentations for credential: {}", vpTokenStrings.size(), credentialId);
       return objectMapper.writeValueAsString(vpToken);
 
-    } catch (JOSEException e) {
-      log.error("JOSE error during multiple presentations generation", e);
+    } catch (SDJWTException e) {
+      log.error("SD-JWT error during multiple presentations generation", e);
       throw new RuntimeException("Multiple presentations generation failed: " + e.getMessage(), e);
     }
   }

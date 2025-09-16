@@ -7,6 +7,7 @@ import com.example.oid4vc.sdjwt.processor.SelectiveDisclosureProcessor;
 import com.example.oid4vc.sdjwt.dcql.DCQLClaimsExtractor;
 import com.example.oid4vc.sdjwt.dto.DCQLQuery;
 import com.nimbusds.jose.JOSEException;
+import com.example.oid4vc.sdjwt.exception.SDJWTException;
 import lombok.extern.slf4j.Slf4j;
 
 import java.security.PrivateKey;
@@ -45,13 +46,13 @@ public class OID4VPHandler {
    * @param audience Verifier's client ID (bound to key binding JWT)
    * @param nonce Nonce from authorization request (bound to key binding JWT)
    * @return SD-JWT VP token string in format: JWT~Disclosure1~Disclosure2~...~KeyBindingJWT
-   * @throws JOSEException if key binding JWT creation fails
+   * @throws SDJWTException if key binding JWT creation fails
    */
   public static String createVPToken(String sdJwtVC,
       Set<String> requestedClaims,
       PrivateKey holderPrivateKey,
       String audience,
-      String nonce) throws JOSEException {
+      String nonce) throws SDJWTException {
 
     log.debug("Creating VP token with selective disclosure for {} claims", requestedClaims.size());
 
@@ -108,14 +109,14 @@ public class OID4VPHandler {
    * @param audience Verifier's client ID
    * @param nonce Authorization request nonce
    * @return SD-JWT VP token string
-   * @throws JOSEException if key binding JWT creation fails
+   * @throws SDJWTException if key binding JWT creation fails
    */
   public static String createVPTokenFromDCQL(String sdJwtVC,
       DCQLQuery dcqlQuery,
       String credentialId,
       PrivateKey holderPrivateKey,
       String audience,
-      String nonce) throws JOSEException {
+      String nonce) throws SDJWTException {
 
     log.debug("Creating VP token from DCQL query for credential: {}", credentialId);
 
@@ -141,14 +142,14 @@ public class OID4VPHandler {
    * @param audience Verifier's client ID
    * @param nonce Authorization request nonce
    * @return SD-JWT VP token string
-   * @throws JOSEException if key binding JWT creation fails
+   * @throws SDJWTException if key binding JWT creation fails
    */
   public static String createAdvancedVPTokenFromDCQL(String sdJwtVC,
       DCQLQuery dcqlQuery,
       String credentialId,
       PrivateKey holderPrivateKey,
       String audience,
-      String nonce) throws JOSEException {
+      String nonce) throws SDJWTException {
 
     log.debug("Creating advanced VP token from DCQL query for credential: {}", credentialId);
 
@@ -197,12 +198,12 @@ public class OID4VPHandler {
    * @param audience Verifier's client ID
    * @param nonce Nonce from authorization request
    * @return Complete SD-JWT VP token with all disclosures
-   * @throws JOSEException if key binding JWT creation fails
+   * @throws SDJWTException if key binding JWT creation fails
    */
   public static String createFullVPToken(String sdJwtVC,
       PrivateKey holderPrivateKey,
       String audience,
-      String nonce) throws JOSEException {
+      String nonce) throws SDJWTException {
 
     log.debug("Creating full disclosure VP token");
 
@@ -228,12 +229,12 @@ public class OID4VPHandler {
    * @param audience Verifier's client ID
    * @param nonce Nonce from authorization request
    * @return Minimal SD-JWT VP token with no disclosures
-   * @throws JOSEException if key binding JWT creation fails
+   * @throws SDJWTException if key binding JWT creation fails
    */
   public static String createMinimalVPToken(String sdJwtVC,
       PrivateKey holderPrivateKey,
       String audience,
-      String nonce) throws JOSEException {
+      String nonce) throws SDJWTException {
 
     log.debug("Creating minimal disclosure VP token");
     log.info("Creating minimal VP token with no selective disclosures");
@@ -253,13 +254,13 @@ public class OID4VPHandler {
    * @param audience Verifier's client ID
    * @param nonce Nonce from authorization request
    * @return List of VP token strings, one for each claim set
-   * @throws JOSEException if key binding JWT creation fails
+   * @throws SDJWTException if key binding JWT creation fails
    */
   public static List<String> createMultipleVPTokens(String sdJwtVC,
       List<Set<String>> claimSets,
       PrivateKey holderPrivateKey,
       String audience,
-      String nonce) throws JOSEException {
+      String nonce) throws SDJWTException {
 
     log.info("Creating {} VP tokens with different disclosure sets", claimSets.size());
 
@@ -267,7 +268,7 @@ public class OID4VPHandler {
         .map(claimSet -> {
           try {
             return createVPToken(sdJwtVC, claimSet, holderPrivateKey, audience, nonce);
-          } catch (JOSEException e) {
+          } catch (SDJWTException e) {
             log.error("Failed to create VP token for claim set: {}", claimSet, e);
             throw new RuntimeException("VP token creation failed", e);
           }
@@ -285,13 +286,13 @@ public class OID4VPHandler {
    * @param audience Verifier's client ID
    * @param nonce Authorization request nonce
    * @return VP token with optimal claim group selection
-   * @throws JOSEException if key binding JWT creation fails
+   * @throws SDJWTException if key binding JWT creation fails
    */
   public static String createVPTokenWithClaimGroups(String sdJwtVC,
       List<Set<String>> claimGroups,
       PrivateKey holderPrivateKey,
       String audience,
-      String nonce) throws JOSEException {
+      String nonce) throws SDJWTException {
 
     log.debug("Creating VP token with {} claim groups", claimGroups.size());
 

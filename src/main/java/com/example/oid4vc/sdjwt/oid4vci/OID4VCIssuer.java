@@ -3,6 +3,7 @@ package com.example.oid4vc.sdjwt.oid4vci;
 import com.example.oid4vc.sdjwt.builder.SDJWTBuilder;
 import com.example.oid4vc.sdjwt.core.SDJWT;
 import com.nimbusds.jose.JOSEException;
+import com.example.oid4vc.sdjwt.exception.SDJWTException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSSigner;
@@ -52,7 +53,7 @@ public class OID4VCIssuer {
    */
   public String issueCredential(String credentialType,
       Map<String, Object> subjectClaims,
-      PublicKey holderPublicKey) throws JOSEException {
+      PublicKey holderPublicKey) throws SDJWTException {
 
     SDJWTBuilder builder = new SDJWTBuilder()
         .issuer(issuerId)
@@ -79,7 +80,7 @@ public class OID4VCIssuer {
    * Issue an identity credential with standard personal information fields.
    */
   public String issueIdentityCredential(Map<String, Object> personalInfo,
-      PublicKey holderPublicKey) throws JOSEException {
+      PublicKey holderPublicKey) throws SDJWTException {
 
     return issueCredential(
         "https://credentials.example.com/identity_credential",
@@ -150,8 +151,10 @@ public class OID4VCIssuer {
 
       return signedJWT.serialize();
 
+    } catch (JOSEException e) {
+      throw new SDJWTException("Failed to sign JWT", e);
     } catch (Exception e) {
-      throw new RuntimeException("Failed to sign JWT", e);
+      throw new SDJWTException("Failed to sign JWT", e);
     }
   }
 }

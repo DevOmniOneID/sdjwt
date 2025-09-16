@@ -9,6 +9,7 @@ import com.example.oid4vc.sdjwt.validation.SDJWTValidator;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nimbusds.jose.JOSEException;
+import com.example.oid4vc.sdjwt.exception.SDJWTException;
 import com.nimbusds.jose.JWSVerifier;
 import com.nimbusds.jose.crypto.ECDSAVerifier;
 import com.nimbusds.jose.crypto.RSASSAVerifier;
@@ -128,18 +129,22 @@ public class SDJWTVerifier {
   /**
    * Verify JWT signature using the appropriate verifier.
    */
-  private boolean verifyJWTSignature(SignedJWT jwt, PublicKey publicKey) throws JOSEException {
-    JWSVerifier verifier;
+  private boolean verifyJWTSignature(SignedJWT jwt, PublicKey publicKey) throws SDJWTException {
+    try {
+      JWSVerifier verifier;
 
-    if (publicKey instanceof RSAPublicKey) {
-      verifier = new RSASSAVerifier((RSAPublicKey) publicKey);
-    } else if (publicKey instanceof ECPublicKey) {
-      verifier = new ECDSAVerifier((ECPublicKey) publicKey);
-    } else {
-      throw new IllegalArgumentException("Unsupported public key type: " + publicKey.getClass());
+      if (publicKey instanceof RSAPublicKey) {
+        verifier = new RSASSAVerifier((RSAPublicKey) publicKey);
+      } else if (publicKey instanceof ECPublicKey) {
+        verifier = new ECDSAVerifier((ECPublicKey) publicKey);
+      } else {
+        throw new IllegalArgumentException("Unsupported public key type: " + publicKey.getClass());
+      }
+
+      return jwt.verify(verifier);
+    } catch (JOSEException e) {
+      throw new SDJWTException("Failed to verify JWT signature", e);
     }
-
-    return jwt.verify(verifier);
   }
 
   /**
