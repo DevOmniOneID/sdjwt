@@ -19,6 +19,102 @@ public class RSASSAVerifier implements JWSVerifier {
         Signature signature = Signature.getInstance("SHA256withRSA");
         signature.initVerify(publicKey);
         signature.update(signedJWT.getSigningInput().getBytes());
-        return signature.verify(signedJWT.getSignatureBytes());
+        
+        byte[] signatureBytes = signedJWT.getSignatureBytes();
+        
+        // RSA signatures are typically consistent across platforms (PKCS#1 v1.5 padding)
+        // However, we add format detection for future compatibility and robustness
+        
+        // For RSA-2048, signature should be 256 bytes
+        // For RSA-3072, signature should be 384 bytes  
+        // For RSA-4096, signature should be 512 bytes
+        int keySize = publicKey.getModulus().bitLength();
+        int expectedSignatureLength = keySize / 8;
+        
+        if (signatureBytes.length == expectedSignatureLength) {
+            // Standard RSA signature format - verify directly
+            return signature.verify(signatureBytes);
+        } else if (isValidDERSequence(signatureBytes)) {
+            // Handle potential DER-wrapped RSA signatures (rare but possible)
+            byte[] extractedSignature = extractSignatureFromDER(signatureBytes);
+            if (extractedSignature.length == expectedSignatureLength) {
+                return signature.verify(extractedSignature);
+            }
+        }
+        
+        // Fallback: try direct verification (backwards compatibility)
+        try {
+            return signature.verify(signatureBytes);
+        } catch (Exception e) {
+            // Log the issue for debugging but don't fail immediately
+            System.err.println("RSA signature verification failed with unexpected format. " +
+                "Expected length: " + expectedSignatureLength + ", Actual length: " + signatureBytes.length);
+            return false;
+        }
+    }
+
+    /**
+     * Check if the byte array starts with a valid DER SEQUENCE tag.
+     * This is a basic check for DER-wrapped signatures.
+     *
+     * @param bytes Input byte array
+     * @return true if it appears to be a DER SEQUENCE
+     */
+    private boolean isValidDERSequence(byte[] bytes) {
+        if (bytes.length < 2) {
+            return false;
+        }
+        // Check for SEQUENCE tag (0x30)
+        return bytes[0] == 0x30;
+    }
+
+    /**
+     * Extract signature bytes from a DER-wrapped structure.
+     * This handles edge cases where RSA signatures might be DER-encoded.
+     *
+     * @param derBytes DER-encoded bytes
+     * @return Extracted signature bytes
+     */
+    private byte[] extractSignatureFromDER(byte[] derBytes) {
+        try {
+            // Simple DER parsing for SEQUENCE { signature }
+            if (derBytes.length < 4 || derBytes[0] != 0x30) {
+                return derBytes; // Not a valid DER SEQUENCE
+            }
+
+            int sequenceLength = derBytes[1] & 0xFF;
+            if (sequenceLength >= 0x80) {
+                // Long form length - handle multi-byte length
+                int lengthBytes = sequenceLength & 0x7F;
+                if (derBytes.length < 2 + lengthBytes) {
+                    return derBytes;
+                }
+                
+                sequenceLength = 0;
+                for (int i = 0; i < lengthBytes; i++) {
+                    sequenceLength = (sequenceLength << 8) | (derBytes[2 + i] & 0xFF);
+                }
+                
+                // Extract content after length bytes
+                int contentStart = 2 + lengthBytes;
+                if (derBytes.length >= contentStart + sequenceLength) {
+                    byte[] content = new byte[sequenceLength];
+                    System.arraycopy(derBytes, contentStart, content, 0, sequenceLength);
+                    return content;
+                }
+            } else {
+                // Short form length
+                if (derBytes.length >= 2 + sequenceLength) {
+                    byte[] content = new byte[sequenceLength];
+                    System.arraycopy(derBytes, 2, content, 0, sequenceLength);
+                    return content;
+                }
+            }
+        } catch (Exception e) {
+            // If DER parsing fails, return original bytes
+            System.err.println("DER parsing failed for RSA signature: " + e.getMessage());
+        }
+        
+        return derBytes; // Return original if parsing fails
     }
 }
