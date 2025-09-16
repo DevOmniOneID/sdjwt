@@ -1,7 +1,5 @@
 package com.example.oid4vc.sdjwt.dcql;
 
-import lombok.extern.slf4j.Slf4j;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -15,7 +13,6 @@ import java.util.stream.Collectors;
  * @version 1.0
  * @since 1.0
  */
-@Slf4j
 public class DCQLPathProcessor {
 
   /**
@@ -42,17 +39,14 @@ public class DCQLPathProcessor {
         } else if (element instanceof Integer) {
           pathParts.add(String.valueOf(element));
         } else {
-          log.warn("Unsupported path element type: {}", element.getClass());
           return null;
         }
       }
 
       String claimName = String.join(".", pathParts);
-      log.debug("Converted path {} to claim name: {}", path, claimName);
       return claimName;
 
     } catch (Exception e) {
-      log.error("Failed to convert path to claim name: {}", path, e);
       return null;
     }
   }
@@ -81,7 +75,6 @@ public class DCQLPathProcessor {
         } else if (element instanceof Integer) {
           pointer.append(element);
         } else {
-          log.warn("Unsupported path element type: {}", element.getClass());
           return null;
         }
       }
@@ -89,7 +82,6 @@ public class DCQLPathProcessor {
       return pointer.toString();
 
     } catch (Exception e) {
-      log.error("Failed to convert path to JSON pointer: {}", path, e);
       return null;
     }
   }
@@ -131,8 +123,6 @@ public class DCQLPathProcessor {
       if (element != null &&
           !(element instanceof String) &&
           !(element instanceof Integer)) {
-        log.debug("Invalid path element type: {} in path {}",
-            element.getClass(), path);
         return false;
       }
     }

@@ -1,7 +1,6 @@
 package com.example.oid4vc.sdjwt.dcql;
 
 import com.example.oid4vc.sdjwt.dto.DCQLQuery;
-import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
 
@@ -13,7 +12,6 @@ import java.util.*;
  * @version 1.0
  * @since 1.0
  */
-@Slf4j
 public class DCQLQueryValidator {
 
   /**
@@ -46,8 +44,6 @@ public class DCQLQueryValidator {
     // 4. 전체적인 일관성 검증
     validateConsistency(dcqlQuery, result);
 
-    log.debug("DCQL validation completed with {} errors, {} warnings",
-        result.getErrors().size(), result.getWarnings().size());
 
     return result;
   }
@@ -357,12 +353,10 @@ public class DCQLQueryValidator {
 
     public void addError(String error) {
       errors.add(error);
-      log.debug("DCQL validation error: {}", error);
     }
 
     public void addWarning(String warning) {
       warnings.add(warning);
-      log.debug("DCQL validation warning: {}", warning);
     }
 
     public List<String> getErrors() { return Collections.unmodifiableList(errors); }

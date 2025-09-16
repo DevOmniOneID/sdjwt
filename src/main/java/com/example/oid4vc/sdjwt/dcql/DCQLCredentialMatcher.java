@@ -2,7 +2,6 @@ package com.example.oid4vc.sdjwt.dcql;
 
 import com.example.oid4vc.sdjwt.core.SDJWT;
 import com.example.oid4vc.sdjwt.dto.DCQLQuery;
-import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -15,7 +14,6 @@ import java.util.stream.Collectors;
  * @version 1.0
  * @since 1.0
  */
-@Slf4j
 public class DCQLCredentialMatcher {
 
   /**
@@ -27,34 +25,28 @@ public class DCQLCredentialMatcher {
    */
   public static boolean matchesCredentialQuery(SDJWT sdjwt, DCQLQuery.CredentialQuery credentialQuery) {
     if (sdjwt == null || credentialQuery == null) {
-      log.warn("SDJWT or credential query is null");
       return false;
     }
 
     try {
       // 1. 포맷 확인
       if (!matchesFormat(credentialQuery.getFormat())) {
-        log.debug("Format mismatch for credential: {}", credentialQuery.getId());
         return false;
       }
 
       // 2. 메타데이터 확인 (vct_values 등)
       if (!matchesMetadata(sdjwt, credentialQuery.getMeta())) {
-        log.debug("Metadata mismatch for credential: {}", credentialQuery.getId());
         return false;
       }
 
       // 3. 요청된 클레임 사용 가능성 확인
       if (!hasRequestedClaims(sdjwt, credentialQuery)) {
-        log.debug("Required claims not available for credential: {}", credentialQuery.getId());
         return false;
       }
 
-      log.debug("Credential {} matches query requirements", credentialQuery.getId());
       return true;
 
     } catch (Exception e) {
-      log.error("Error matching credential query for {}", credentialQuery.getId(), e);
       return false;
     }
   }
@@ -82,8 +74,6 @@ public class DCQLCredentialMatcher {
       }
     }
 
-    log.info("Found {} matching credentials out of {} available",
-        matchingCredentials.size(), sdjwtMap.size());
     return matchingCredentials;
   }
 
@@ -109,7 +99,6 @@ public class DCQLCredentialMatcher {
       }
     }
 
-    log.debug("Found {} satisfiable credential sets", matches.size());
     return matches;
   }
 
@@ -164,7 +153,6 @@ public class DCQLCredentialMatcher {
       return true;
 
     } catch (Exception e) {
-      log.error("Error checking metadata", e);
       return false;
     }
   }
@@ -176,7 +164,6 @@ public class DCQLCredentialMatcher {
 
     // TODO: SD-JWT의 vct 클레임 값과 비교하는 로직 구현
     // 현재는 임시로 true 반환
-    log.debug("VCT values check not fully implemented - returning true");
     return true;
   }
 

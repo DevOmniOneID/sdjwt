@@ -1,7 +1,6 @@
 package com.example.oid4vc.sdjwt.dcql;
 
 import com.example.oid4vc.sdjwt.dto.DCQLQuery;
-import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -14,7 +13,6 @@ import java.util.stream.Collectors;
  * @version 1.0
  * @since 1.0
  */
-@Slf4j
 public class DCQLClaimsExtractor {
 
   /**
@@ -25,7 +23,6 @@ public class DCQLClaimsExtractor {
    */
   public static Set<String> extractClaimNames(DCQLQuery dcqlQuery) {
     if (dcqlQuery == null || dcqlQuery.getCredentials() == null) {
-      log.warn("DCQL query or credentials is null");
       return Collections.emptySet();
     }
 
@@ -42,7 +39,6 @@ public class DCQLClaimsExtractor {
       }
     });
 
-    log.debug("Extracted {} claim names from DCQL query", allClaims.size());
     return allClaims;
   }
 
@@ -70,7 +66,6 @@ public class DCQLClaimsExtractor {
       }
     });
 
-    log.debug("Extracted {} claim paths from DCQL query", allPaths.size());
     return allPaths;
   }
 
@@ -103,7 +98,6 @@ public class DCQLClaimsExtractor {
       credentialClaimsMap.put(credentialId, claims);
     });
 
-    log.debug("Extracted claims for {} credentials", credentialClaimsMap.size());
     return credentialClaimsMap;
   }
 
@@ -180,7 +174,6 @@ public class DCQLClaimsExtractor {
       }
     });
 
-    log.debug("Extracted array selections for {} array paths", arraySelections.size());
     return arraySelections;
   }
 

@@ -3,7 +3,6 @@ package com.example.oid4vc.sdjwt.processor;
 import com.example.oid4vc.sdjwt.core.SDJWT;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
 
@@ -15,7 +14,6 @@ import java.util.*;
  * @version 1.0
  * @since 1.0
  */
-@Slf4j
 public class CredentialFormatProcessor {
 
   private static final ObjectMapper objectMapper = new ObjectMapper();
@@ -72,7 +70,6 @@ public class CredentialFormatProcessor {
           return FormatValidationResult.invalid("Unsupported format: " + expectedFormat);
       }
     } catch (Exception e) {
-      log.error("Error validating credential data for format {}", expectedFormat, e);
       return FormatValidationResult.invalid("Validation error: " + e.getMessage());
     }
   }
@@ -105,11 +102,9 @@ public class CredentialFormatProcessor {
           return extractW3CVCClaims(credentialData);
 
         default:
-          log.warn("Unsupported format for claim extraction: {}", format);
           return Collections.emptySet();
       }
     } catch (Exception e) {
-      log.error("Error extracting claims for format {}", format, e);
       return Collections.emptySet();
     }
   }
@@ -151,7 +146,6 @@ public class CredentialFormatProcessor {
       }
 
     } catch (Exception e) {
-      log.error("Error extracting metadata for format {}", format, e);
       metadata.put("error", e.getMessage());
     }
 
@@ -246,7 +240,6 @@ public class CredentialFormatProcessor {
           .map(disclosure -> disclosure.getClaimName())
           .collect(java.util.stream.Collectors.toSet());
     } catch (Exception e) {
-      log.error("Error extracting SD-JWT claims", e);
       return Collections.emptySet();
     }
   }
@@ -273,7 +266,6 @@ public class CredentialFormatProcessor {
 
       return claims;
     } catch (Exception e) {
-      log.error("Error extracting W3C VC claims", e);
       return Collections.emptySet();
     }
   }

@@ -4,7 +4,6 @@ import com.example.oid4vc.sdjwt.dcql.DCQLCredentialMatcher;
 import com.example.oid4vc.sdjwt.dcql.DCQLQueryValidator;
 import com.example.oid4vc.sdjwt.core.SDJWT;
 import com.example.oid4vc.sdjwt.dto.DCQLQuery;
-import lombok.extern.slf4j.Slf4j;
 
 import java.security.PrivateKey;
 import java.util.*;
@@ -17,7 +16,6 @@ import java.util.*;
  * @version 1.0
  * @since 1.0
  */
-@Slf4j
 public class OID4VPRequestProcessor {
 
   /**
@@ -30,7 +28,6 @@ public class OID4VPRequestProcessor {
     long startTime = System.currentTimeMillis();
 
     try {
-      log.info("Processing OpenID4VP authorization request for client: {}", request.getClientId());
 
       // 1. 기본 요청 유효성 검증
       OID4VPProcessingResult validationResult = validateRequest(request);
@@ -56,7 +53,6 @@ public class OID4VPRequestProcessor {
       return vpTokenResult.withProcessingTime(startTime);
 
     } catch (Exception e) {
-      log.error("Failed to process OpenID4VP authorization request", e);
       return OID4VPProcessingResult.failure("Request processing failed: " + e.getMessage())
           .withProcessingTime(startTime);
     }
@@ -104,7 +100,6 @@ public class OID4VPRequestProcessor {
       return result;
 
     } catch (Exception e) {
-      log.error("Failed to create simple VP token", e);
       return OID4VPProcessingResult.failure("VP token creation failed: " + e.getMessage());
     }
   }
@@ -125,7 +120,6 @@ public class OID4VPRequestProcessor {
       String clientId,
       String nonce) {
     try {
-      log.info("Creating batch VP tokens for {} credentials", credentialMap.size());
 
       // DCQL 검증
       DCQLQueryValidator.ValidationResult validation = DCQLQueryValidator.validate(dcqlQuery);
@@ -148,7 +142,6 @@ public class OID4VPRequestProcessor {
         } catch (Exception e) {
           String error = "Failed to create VP token for credential " + credentialId + ": " + e.getMessage();
           errors.add(error);
-          log.error(error, e);
         }
       }
 
@@ -170,7 +163,6 @@ public class OID4VPRequestProcessor {
       return result;
 
     } catch (Exception e) {
-      log.error("Failed to create batch VP tokens", e);
       return OID4VPProcessingResult.failure("Batch VP token creation failed: " + e.getMessage());
     }
   }
@@ -230,7 +222,6 @@ public class OID4VPRequestProcessor {
           SDJWT sdjwt = SDJWT.parse(entry.getValue());
           sdjwtMap.put(entry.getKey(), sdjwt);
         } catch (Exception e) {
-          log.warn("Failed to parse SD-JWT for credential {}: {}", entry.getKey(), e.getMessage());
         }
       }
 
@@ -250,7 +241,6 @@ public class OID4VPRequestProcessor {
       return result;
 
     } catch (Exception e) {
-      log.error("Credential matching failed", e);
       return OID4VPProcessingResult.failure("Credential matching failed: " + e.getMessage());
     }
   }

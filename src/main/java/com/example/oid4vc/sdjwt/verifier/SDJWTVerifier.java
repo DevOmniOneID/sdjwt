@@ -3,17 +3,13 @@ package com.example.oid4vc.sdjwt.verifier;
 import com.example.oid4vc.sdjwt.core.Disclosure;
 import com.example.oid4vc.sdjwt.core.SDJWT;
 import com.example.oid4vc.sdjwt.exception.SDJWTException;
-import com.example.oid4vc.sdjwt.util.Base64UrlUtils;
+import com.example.oid4vc.sdjwt.jwt.JWSVerifier;
+import com.example.oid4vc.sdjwt.jwt.SignedJWT;
+import com.example.oid4vc.sdjwt.jwt.crypto.ECDSAVerifier;
+import com.example.oid4vc.sdjwt.jwt.crypto.RSASSAVerifier;
 import com.example.oid4vc.sdjwt.util.HashUtils;
 import com.example.oid4vc.sdjwt.validation.SDJWTValidator;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.nimbusds.jose.JOSEException;
-import com.example.oid4vc.sdjwt.exception.SDJWTException;
-import com.nimbusds.jose.JWSVerifier;
-import com.nimbusds.jose.crypto.ECDSAVerifier;
-import com.nimbusds.jose.crypto.RSASSAVerifier;
-import com.nimbusds.jwt.SignedJWT;
 
 import java.security.PublicKey;
 import java.security.interfaces.ECPublicKey;
@@ -142,7 +138,7 @@ public class SDJWTVerifier {
       }
 
       return jwt.verify(verifier);
-    } catch (JOSEException e) {
+    } catch (Exception e) {
       throw new SDJWTException("Failed to verify JWT signature", e);
     }
   }
@@ -165,7 +161,7 @@ public class SDJWTVerifier {
       }
 
       // Verify claims
-      Map<String, Object> kbClaims = kbJwt.getJWTClaimsSet().getClaims();
+      Map<String, Object> kbClaims = kbJwt.getJWTClaimsSet();
 
       if (expectedAudience != null) {
         // Handle both string and list audience values
@@ -213,7 +209,7 @@ public class SDJWTVerifier {
   private void verifyDisclosureIntegrity(SDJWT sdJwt) throws SDJWTException {
     try {
       SignedJWT credentialJwt = SignedJWT.parse(sdJwt.getCredentialJwt());
-      Map<String, Object> payload = credentialJwt.getJWTClaimsSet().getClaims();
+      Map<String, Object> payload = credentialJwt.getJWTClaimsSet();
 
       // Extract _sd array and hash algorithm
       List<String> sdArray = extractSDArray(payload);
@@ -228,8 +224,8 @@ public class SDJWTVerifier {
         }
       }
 
-    } catch (ParseException e) {
-      throw new SDJWTException("Failed to parse credential JWT for disclosure verification", e);
+    } catch (Exception e) {
+        throw new SDJWTException("Failed to verify disclosure integrity", e);
     }
   }
 
@@ -259,7 +255,7 @@ public class SDJWTVerifier {
   private SDJWTClaimsSet buildClaimsSet(SDJWT sdJwt) throws SDJWTException {
     try {
       SignedJWT credentialJwt = SignedJWT.parse(sdJwt.getCredentialJwt());
-      Map<String, Object> baseClaims = new LinkedHashMap<>(credentialJwt.getJWTClaimsSet().getClaims());
+      Map<String, Object> baseClaims = new LinkedHashMap<>(credentialJwt.getJWTClaimsSet());
 
       // Remove SD-JWT specific claims
       baseClaims.remove("_sd");
@@ -274,8 +270,8 @@ public class SDJWTVerifier {
 
       return new SDJWTClaimsSet(baseClaims, sdJwt.getDisclosures());
 
-    } catch (ParseException e) {
-      throw new SDJWTException("Failed to build claims set", e);
+    } catch (Exception e) {
+        throw new SDJWTException("Failed to build claims set", e);
     }
   }
 

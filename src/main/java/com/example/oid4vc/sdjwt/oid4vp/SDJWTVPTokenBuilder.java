@@ -5,9 +5,7 @@ import com.example.oid4vc.sdjwt.dto.DCQLQuery;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.nimbusds.jose.JOSEException;
 import com.example.oid4vc.sdjwt.exception.SDJWTException;
-import lombok.extern.slf4j.Slf4j;
 
 import java.security.PrivateKey;
 import java.util.HashSet;
@@ -33,7 +31,6 @@ import java.util.Set;
  * @version 2.0
  * @since 1.0
  */
-@Slf4j
 public class SDJWTVPTokenBuilder {
 
   private final ObjectMapper objectMapper = new ObjectMapper();
@@ -187,10 +184,8 @@ public class SDJWTVPTokenBuilder {
       return createVPTokenStructure(vpTokenString);
 
     } catch (SDJWTException e) {
-      log.error("JOSE error during VP Token creation", e);
       throw new RuntimeException("VP Token creation failed due to JOSE error: " + e.getMessage(), e);
     } catch (Exception e) {
-      log.error("Failed to build VP Token", e);
       throw new RuntimeException("VP Token creation failed", e);
     }
   }
@@ -224,7 +219,6 @@ public class SDJWTVPTokenBuilder {
 
     } catch (Exception e) {
       long processingTime = System.currentTimeMillis() - startTime;
-      log.error("VP Token build failed", e);
 
       return VPTokenBuildResult.builder()
           .success(false)
@@ -252,10 +246,8 @@ public class SDJWTVPTokenBuilder {
       return createMultipleVPTokenStructure(vpTokenStrings);
 
     } catch (SDJWTException e) {
-      log.error("JOSE error during multiple VP Token creation", e);
       throw new RuntimeException("Multiple VP Token creation failed due to JOSE error: " + e.getMessage(), e);
     } catch (Exception e) {
-      log.error("Failed to build multiple VP Tokens", e);
       throw new RuntimeException("Multiple VP Token creation failed", e);
     }
   }
@@ -292,18 +284,14 @@ public class SDJWTVPTokenBuilder {
 
   private String createVPTokenString() throws SDJWTException {
     if (fullDisclosure) {
-      log.debug("Creating VP token with full disclosure");
       return OID4VPHandler.createFullVPToken(sdJwtVC, holderPrivateKey, audience, nonce);
     } else if (minimalDisclosure) {
-      log.debug("Creating VP token with minimal disclosure");
       return OID4VPHandler.createMinimalVPToken(sdJwtVC, holderPrivateKey, audience, nonce);
     } else if (dcqlQuery != null) {
-      log.debug("Creating VP token from DCQL query");
       return OID4VPHandler.createVPTokenFromDCQL(
           sdJwtVC, dcqlQuery, credentialId, holderPrivateKey, audience, nonce);
     } else {
       Set<String> effectiveClaims = getEffectiveRequestedClaims();
-      log.debug("Creating VP token with {} specific claims", effectiveClaims.size());
       return OID4VPHandler.createVPToken(sdJwtVC, effectiveClaims, holderPrivateKey, audience, nonce);
     }
   }
@@ -314,7 +302,6 @@ public class SDJWTVPTokenBuilder {
     presentations.add(vpTokenString);
     vpToken.set(credentialId, presentations);
 
-    log.info("Created VP Token structure for credential: {}", credentialId);
     return objectMapper.writeValueAsString(vpToken);
   }
 
@@ -328,8 +315,6 @@ public class SDJWTVPTokenBuilder {
 
     vpToken.set(credentialId, presentations);
 
-    log.info("Created multiple VP Token structure with {} presentations for credential: {}",
-        vpTokenStrings.size(), credentialId);
     return objectMapper.writeValueAsString(vpToken);
   }
 

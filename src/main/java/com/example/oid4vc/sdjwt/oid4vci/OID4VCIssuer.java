@@ -2,22 +2,20 @@ package com.example.oid4vc.sdjwt.oid4vci;
 
 import com.example.oid4vc.sdjwt.builder.SDJWTBuilder;
 import com.example.oid4vc.sdjwt.core.SDJWT;
-import com.nimbusds.jose.JOSEException;
 import com.example.oid4vc.sdjwt.exception.SDJWTException;
-import com.nimbusds.jose.JWSAlgorithm;
-import com.nimbusds.jose.JWSHeader;
-import com.nimbusds.jose.JWSSigner;
-import com.nimbusds.jose.crypto.ECDSASigner;
-import com.nimbusds.jose.crypto.RSASSASigner;
-import com.nimbusds.jose.util.JSONObjectUtils;
-import com.nimbusds.jwt.JWTClaimsSet;
-import com.nimbusds.jwt.SignedJWT;
+import com.example.oid4vc.sdjwt.jwt.JWSSigner;
+import com.example.oid4vc.sdjwt.jwt.SignedJWT;
+import com.example.oid4vc.sdjwt.jwt.crypto.ECDSASigner;
+import com.example.oid4vc.sdjwt.jwt.crypto.RSASSASigner;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.interfaces.ECPrivateKey;
 import java.security.interfaces.RSAPrivateKey;
 import java.time.temporal.ChronoUnit;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -123,36 +121,33 @@ public class OID4VCIssuer {
   private String signJWT(String payloadJson) {
     try {
       // Determine algorithm and create signer
-      JWSAlgorithm algorithm;
+      String algorithm;
       JWSSigner signer;
 
       if (issuerPrivateKey instanceof RSAPrivateKey) {
-        algorithm = JWSAlgorithm.RS256;
+        algorithm = "RS256";
         signer = new RSASSASigner((RSAPrivateKey) issuerPrivateKey);
       } else if (issuerPrivateKey instanceof ECPrivateKey) {
-        algorithm = JWSAlgorithm.ES256;
+        algorithm = "ES256";
         signer = new ECDSASigner((ECPrivateKey) issuerPrivateKey);
       } else {
         throw new IllegalArgumentException("Unsupported private key type");
       }
 
       // Create header
-      JWSHeader header = new JWSHeader.Builder(algorithm)
-          .type(new com.nimbusds.jose.JOSEObjectType("vc+sd-jwt"))
-          .build();
+      Map<String, Object> header = new HashMap<>();
+      header.put("alg", algorithm);
+      header.put("typ", "vc+sd-jwt");
 
       // Parse payload
-      Map<String, Object> payloadMap = JSONObjectUtils.parse(payloadJson);
-      JWTClaimsSet claimsSet = JWTClaimsSet.parse(payloadMap);
+      Map<String, Object> payloadMap = new ObjectMapper().readValue(payloadJson, new TypeReference<Map<String, Object>>() {});
 
       // Create and sign JWT
-      SignedJWT signedJWT = new SignedJWT(header, claimsSet);
+      SignedJWT signedJWT = new SignedJWT(header, payloadMap);
       signedJWT.sign(signer);
 
       return signedJWT.serialize();
 
-    } catch (JOSEException e) {
-      throw new SDJWTException("Failed to sign JWT", e);
     } catch (Exception e) {
       throw new SDJWTException("Failed to sign JWT", e);
     }

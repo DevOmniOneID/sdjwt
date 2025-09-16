@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import lombok.extern.slf4j.Slf4j;
 
 import java.security.PrivateKey;
 import java.time.Instant;
@@ -17,7 +16,6 @@ import java.util.Set;
  * 
  * Pure Java implementation without Spring dependencies for SDK compatibility
  */
-@Slf4j
 public class VPTokenGenerator {
 
   private final ObjectMapper objectMapper = new ObjectMapper();
@@ -62,11 +60,9 @@ public class VPTokenGenerator {
       presentations.add(jwtVP);
       vpToken.set(credentialId, presentations);
 
-      log.info("Generated W3C VP Token for credential: {}", credentialId);
       return objectMapper.writeValueAsString(vpToken);
 
     } catch (Exception e) {
-      log.error("Failed to generate W3C VP Token", e);
       throw new RuntimeException("VP Token generation failed", e);
     }
   }
@@ -111,11 +107,9 @@ public class VPTokenGenerator {
       presentations.add(jwtVP);
       vpToken.set(credentialId, presentations);
 
-      log.info("Generated JWT VC VP Token for credential: {}", credentialId);
       return objectMapper.writeValueAsString(vpToken);
 
     } catch (Exception e) {
-      log.error("Failed to generate JWT VC VP Token", e);
       throw new RuntimeException("VP Token generation failed", e);
     }
   }
@@ -204,20 +198,16 @@ public class VPTokenGenerator {
       Set<String> requestedClaims, PrivateKey holderPrivateKey,
       String verifierClientId, String nonce) {
     try {
-      log.debug("Generating SD-JWT VP Token using enhanced OID4VP handler for credential: {}", credentialId);
 
       // Use the enhanced SDJWTVPTokenBuilder for consistent VP Token creation
       String vpToken = SDJWTVPTokenBuilder.createSimple(
           credentialId, sdJwtVC, holderPrivateKey, verifierClientId, nonce,
           requestedClaims.toArray(new String[0]));
 
-      log.info("Successfully generated SD-JWT VP Token for credential: {} with {} disclosed claims", 
-          credentialId, requestedClaims.size());
       
       return vpToken;
 
     } catch (Exception e) {
-      log.error("Failed to generate SD-JWT VP Token for credential: {}", credentialId, e);
       throw new RuntimeException("SD-JWT VP Token generation failed: " + e.getMessage(), e);
     }
   }
@@ -229,17 +219,14 @@ public class VPTokenGenerator {
   public String generateFullSDJWTVPToken(String credentialId, String sdJwtVC,
       PrivateKey holderPrivateKey, String verifierClientId, String nonce) {
     try {
-      log.debug("Generating full disclosure SD-JWT VP Token for credential: {}", credentialId);
 
       // Use the enhanced SDJWTVPTokenBuilder for full disclosure
       String vpToken = SDJWTVPTokenBuilder.createFull(
           credentialId, sdJwtVC, holderPrivateKey, verifierClientId, nonce);
 
-      log.info("Successfully generated full disclosure SD-JWT VP Token for credential: {}", credentialId);
       return vpToken;
 
     } catch (Exception e) {
-      log.error("Failed to generate full SD-JWT VP Token for credential: {}", credentialId, e);
       throw new RuntimeException("Full SD-JWT VP Token generation failed: " + e.getMessage(), e);
     }
   }
@@ -251,17 +238,14 @@ public class VPTokenGenerator {
   public String generateMinimalSDJWTVPToken(String credentialId, String sdJwtVC,
       PrivateKey holderPrivateKey, String verifierClientId, String nonce) {
     try {
-      log.debug("Generating minimal disclosure SD-JWT VP Token for credential: {}", credentialId);
 
       // Use the enhanced SDJWTVPTokenBuilder for minimal disclosure
       String vpToken = SDJWTVPTokenBuilder.createMinimal(
           credentialId, sdJwtVC, holderPrivateKey, verifierClientId, nonce);
 
-      log.info("Successfully generated minimal disclosure SD-JWT VP Token for credential: {}", credentialId);
       return vpToken;
 
     } catch (Exception e) {
-      log.error("Failed to generate minimal SD-JWT VP Token for credential: {}", credentialId, e);
       throw new RuntimeException("Minimal SD-JWT VP Token generation failed: " + e.getMessage(), e);
     }
   }
@@ -282,18 +266,14 @@ public class VPTokenGenerator {
       java.util.List<Set<String>> claimSets, PrivateKey holderPrivateKey,
       String verifierClientId, String nonce) {
     try {
-      log.debug("Generating multiple presentations SD-JWT VP Token for credential: {}", credentialId);
 
       // Use the enhanced DCQLVPTokenGenerator for multiple presentations
       String vpToken = DCQLVPTokenGenerator.generateMultiplePresentations(
           credentialId, sdJwtVC, claimSets, holderPrivateKey, verifierClientId, nonce);
 
-      log.info("Successfully generated {} presentations SD-JWT VP Token for credential: {}", 
-              claimSets.size(), credentialId);
       return vpToken;
 
     } catch (Exception e) {
-      log.error("Failed to generate multiple presentations SD-JWT VP Token for credential: {}", credentialId, e);
       throw new RuntimeException("Multiple presentations VP Token generation failed: " + e.getMessage(), e);
     }
   }

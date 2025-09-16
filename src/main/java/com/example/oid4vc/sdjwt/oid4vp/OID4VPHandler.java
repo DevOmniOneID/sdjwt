@@ -6,9 +6,7 @@ import com.example.oid4vc.sdjwt.keybinding.KeyBindingJWTBuilder;
 import com.example.oid4vc.sdjwt.processor.SelectiveDisclosureProcessor;
 import com.example.oid4vc.sdjwt.dcql.DCQLClaimsExtractor;
 import com.example.oid4vc.sdjwt.dto.DCQLQuery;
-import com.nimbusds.jose.JOSEException;
 import com.example.oid4vc.sdjwt.exception.SDJWTException;
-import lombok.extern.slf4j.Slf4j;
 
 import java.security.PrivateKey;
 import java.util.List;
@@ -30,7 +28,6 @@ import java.util.stream.Collectors;
  * @version 2.0
  * @since 1.0
  */
-@Slf4j
 public class OID4VPHandler {
 
   /**
@@ -54,18 +51,14 @@ public class OID4VPHandler {
       String audience,
       String nonce) throws SDJWTException {
 
-    log.debug("Creating VP token with selective disclosure for {} claims", requestedClaims.size());
 
     // 1. Parse the SD-JWT VC
     SDJWT originalSDJWT = SDJWT.parse(sdJwtVC);
-    log.debug("Parsed SD-JWT VC with {} disclosures", originalSDJWT.getDisclosures().size());
 
     // 2. Filter disclosures based on requested claims using enhanced processor
     List<Disclosure> selectedDisclosures = SelectiveDisclosureProcessor.filterDisclosures(
         originalSDJWT.getDisclosures(), requestedClaims);
 
-    log.info("Selected {} out of {} disclosures for VP token",
-        selectedDisclosures.size(), originalSDJWT.getDisclosures().size());
 
     // 3. Create filtered SD-JWT (without key binding initially)
     SDJWT filteredSDJWT = new SDJWT(
@@ -93,7 +86,6 @@ public class OID4VPHandler {
     );
 
     String vpToken = finalSDJWT.toString();
-    log.info("Created VP token with key binding for audience: {}", audience);
 
     return vpToken;
   }
@@ -118,13 +110,11 @@ public class OID4VPHandler {
       String audience,
       String nonce) throws SDJWTException {
 
-    log.debug("Creating VP token from DCQL query for credential: {}", credentialId);
 
     // Extract requested claims from DCQL for specific credential
     Set<String> requestedClaims = DCQLClaimsExtractor.extractClaimsForCredential(dcqlQuery, credentialId);
 
     if (requestedClaims.isEmpty()) {
-      log.info("No specific claims requested in DCQL for credential {}, creating minimal disclosure", credentialId);
       return createMinimalVPToken(sdJwtVC, holderPrivateKey, audience, nonce);
     }
 
@@ -151,7 +141,6 @@ public class OID4VPHandler {
       String audience,
       String nonce) throws SDJWTException {
 
-    log.debug("Creating advanced VP token from DCQL query for credential: {}", credentialId);
 
     // 1. Parse original SD-JWT
     SDJWT originalSDJWT = SDJWT.parse(sdJwtVC);
@@ -161,7 +150,6 @@ public class OID4VPHandler {
         sdJwtVC, dcqlQuery, credentialId);
 
     if (processedSDJWT == null) {
-      log.warn("DCQL processing failed for credential {}, falling back to minimal disclosure", credentialId);
       return createMinimalVPToken(sdJwtVC, holderPrivateKey, audience, nonce);
     }
 
@@ -183,8 +171,6 @@ public class OID4VPHandler {
     );
 
     String vpToken = finalSDJWT.toString();
-    log.info("Created advanced VP token with {} disclosures for credential: {}",
-        processedSDJWT.getDisclosures().size(), credentialId);
 
     return vpToken;
   }
@@ -205,7 +191,6 @@ public class OID4VPHandler {
       String audience,
       String nonce) throws SDJWTException {
 
-    log.debug("Creating full disclosure VP token");
 
     SDJWT originalSDJWT = SDJWT.parse(sdJwtVC);
 
@@ -214,7 +199,6 @@ public class OID4VPHandler {
         .map(Disclosure::getClaimName)
         .collect(Collectors.toSet());
 
-    log.info("Creating full VP token with {} claims", allClaims.size());
 
     return createVPToken(sdJwtVC, allClaims, holderPrivateKey, audience, nonce);
   }
@@ -236,8 +220,6 @@ public class OID4VPHandler {
       String audience,
       String nonce) throws SDJWTException {
 
-    log.debug("Creating minimal disclosure VP token");
-    log.info("Creating minimal VP token with no selective disclosures");
 
     // Create VP with empty set (no disclosures, only mandatory claims in JWT)
     return createVPToken(sdJwtVC, Set.of(), holderPrivateKey, audience, nonce);
@@ -262,14 +244,12 @@ public class OID4VPHandler {
       String audience,
       String nonce) throws SDJWTException {
 
-    log.info("Creating {} VP tokens with different disclosure sets", claimSets.size());
 
     return claimSets.stream()
         .map(claimSet -> {
           try {
             return createVPToken(sdJwtVC, claimSet, holderPrivateKey, audience, nonce);
           } catch (SDJWTException e) {
-            log.error("Failed to create VP token for claim set: {}", claimSet, e);
             throw new RuntimeException("VP token creation failed", e);
           }
         })
@@ -294,7 +274,6 @@ public class OID4VPHandler {
       String audience,
       String nonce) throws SDJWTException {
 
-    log.debug("Creating VP token with {} claim groups", claimGroups.size());
 
     // 1. Parse original SD-JWT
     SDJWT originalSDJWT = SDJWT.parse(sdJwtVC);
@@ -327,7 +306,6 @@ public class OID4VPHandler {
     );
 
     String vpToken = finalSDJWT.toString();
-    log.info("Created VP token with {} disclosures from claim groups", selectedDisclosures.size());
 
     return vpToken;
   }
@@ -355,14 +333,11 @@ public class OID4VPHandler {
         return VPTokenValidationResult.invalid("SD-JWT VC has no disclosures");
       }
 
-      log.debug("SD-JWT VC validation successful: {} disclosures available",
-          sdjwt.getDisclosures().size());
 
       return VPTokenValidationResult.valid(
           "Valid SD-JWT VC with " + sdjwt.getDisclosures().size() + " disclosures");
 
     } catch (Exception e) {
-      log.error("SD-JWT VC validation failed", e);
       return VPTokenValidationResult.invalid("SD-JWT VC parsing failed: " + e.getMessage());
     }
   }

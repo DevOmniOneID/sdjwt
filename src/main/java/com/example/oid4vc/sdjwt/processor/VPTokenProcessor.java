@@ -7,9 +7,7 @@ import com.example.oid4vc.sdjwt.oid4vp.OID4VPHandler;
 import com.example.oid4vc.sdjwt.oid4vp.VPTokenGenerator;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.nimbusds.jose.JOSEException;
 import com.example.oid4vc.sdjwt.exception.SDJWTException;
-import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -22,7 +20,6 @@ import java.util.stream.Collectors;
  * @version 1.0
  * @since 1.0
  */
-@Slf4j
 public class VPTokenProcessor {
 
   private static final ObjectMapper objectMapper = new ObjectMapper();
@@ -39,8 +36,6 @@ public class VPTokenProcessor {
     try {
       // 1. 요청 유효성 검증
       request.validate();
-      log.debug("Processing VP token request for credential: {} (format: {})",
-          request.getCredentialId(), request.getFormat());
 
       // 2. DCQL 검증 (있는 경우)
       VPTokenResult validationResult = validateDCQLIfPresent(request);
@@ -57,12 +52,10 @@ public class VPTokenProcessor {
           .withOriginalRequest(request);
 
     } catch (IllegalArgumentException e) {
-      log.error("Invalid VP token request: {}", e.getMessage());
       return VPTokenResult.failure("Invalid request: " + e.getMessage())
           .withProcessingTime(startTime)
           .withOriginalRequest(request);
     } catch (Exception e) {
-      log.error("Failed to create VP token", e);
       return VPTokenResult.failure("VP token creation failed", e)
           .withProcessingTime(startTime)
           .withOriginalRequest(request);
@@ -80,7 +73,6 @@ public class VPTokenProcessor {
       return Collections.emptyList();
     }
 
-    log.info("Processing batch VP token creation for {} requests", requests.size());
 
     return requests.parallelStream()
         .map(VPTokenProcessor::createVPToken)
@@ -221,10 +213,8 @@ public class VPTokenProcessor {
       return result;
 
     } catch (SDJWTException e) {
-      log.error("JOSE error during SD-JWT VP token creation", e);
       return VPTokenResult.failure("Key binding JWT creation failed", e);
     } catch (Exception e) {
-      log.error("Failed to generate SD-JWT VP token", e);
       return VPTokenResult.failure("SD-JWT VP token generation failed", e);
     }
   }
@@ -250,7 +240,6 @@ public class VPTokenProcessor {
       return VPTokenResult.success(vpToken);
 
     } catch (Exception e) {
-      log.error("Failed to generate JWT VC VP token", e);
       return VPTokenResult.failure("JWT VC VP token generation failed", e);
     }
   }
@@ -276,7 +265,6 @@ public class VPTokenProcessor {
       return VPTokenResult.success(vpToken);
 
     } catch (Exception e) {
-      log.error("Failed to generate W3C VC VP token", e);
       return VPTokenResult.failure("W3C VC VP token generation failed", e);
     }
   }

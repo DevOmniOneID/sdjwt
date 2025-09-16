@@ -1,14 +1,10 @@
 package com.example.oid4vc.sdjwt.keybinding;
 
-import com.nimbusds.jose.JOSEException;
 import com.example.oid4vc.sdjwt.exception.SDJWTException;
-import com.nimbusds.jose.JWSAlgorithm;
-import com.nimbusds.jose.JWSHeader;
-import com.nimbusds.jose.JWSSigner;
-import com.nimbusds.jose.crypto.ECDSASigner;
-import com.nimbusds.jose.crypto.RSASSASigner;
-import com.nimbusds.jwt.JWTClaimsSet;
-import com.nimbusds.jwt.SignedJWT;
+import com.example.oid4vc.sdjwt.jwt.JWSSigner;
+import com.example.oid4vc.sdjwt.jwt.SignedJWT;
+import com.example.oid4vc.sdjwt.jwt.crypto.ECDSASigner;
+import com.example.oid4vc.sdjwt.jwt.crypto.RSASSASigner;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -18,7 +14,6 @@ import java.security.interfaces.ECPrivateKey;
 import java.security.interfaces.RSAPrivateKey;
 import java.time.Instant;
 import java.util.Base64;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -87,50 +82,48 @@ public class KeyBindingJWTBuilder {
   public String build() throws SDJWTException {
     try {
       // Determine algorithm based on key type
-      JWSAlgorithm algorithm;
+      String algorithm;
       JWSSigner signer;
 
       if (holderKey instanceof RSAPrivateKey) {
-        algorithm = JWSAlgorithm.RS256;
+        algorithm = "RS256";
         signer = new RSASSASigner((RSAPrivateKey) holderKey);
       } else if (holderKey instanceof ECPrivateKey) {
-        algorithm = JWSAlgorithm.ES256;
+        algorithm = "ES256";
         signer = new ECDSASigner((ECPrivateKey) holderKey);
       } else {
         throw new IllegalArgumentException("Unsupported private key type: " + holderKey.getClass());
       }
 
       // Create header
-      JWSHeader header = new JWSHeader.Builder(algorithm)
-          .type(new com.nimbusds.jose.JOSEObjectType("kb+jwt"))
-          .build();
+      Map<String, Object> header = new HashMap<>();
+      header.put("alg", algorithm);
+      header.put("typ", "kb+jwt");
 
       // Create claims
-      JWTClaimsSet.Builder claimsBuilder = new JWTClaimsSet.Builder();
+      Map<String, Object> claims = new HashMap<>();
 
       if (audience != null) {
-        claimsBuilder.audience(audience);
+        claims.put("aud", audience);
       }
 
       if (nonce != null) {
-        claimsBuilder.claim("nonce", nonce);
+        claims.put("nonce", nonce);
       }
 
       if (issuedAt != null) {
-        claimsBuilder.issueTime(Date.from(issuedAt));
+        claims.put("iat", issuedAt.getEpochSecond());
       }
 
       // Add additional claims
-      additionalClaims.forEach(claimsBuilder::claim);
-
-      JWTClaimsSet claims = claimsBuilder.build();
+      claims.putAll(additionalClaims);
 
       // Create and sign JWT
       SignedJWT signedJWT = new SignedJWT(header, claims);
       signedJWT.sign(signer);
 
       return signedJWT.serialize();
-    } catch (JOSEException e) {
+    } catch (Exception e) {
       throw new SDJWTException("Failed to create key binding JWT", e);
     }
   }
@@ -147,7 +140,7 @@ public class KeyBindingJWTBuilder {
 
   /**
    * Static helper method to create a Key Binding JWT with sd_hash (IETF SD-JWT compliant).
-   * 
+   *
    * @param holderKey Holder's private key for signing
    * @param audience Verifier's identifier (aud claim)
    * @param nonce Unique nonce for replay protection
@@ -157,7 +150,7 @@ public class KeyBindingJWTBuilder {
    */
   public static String createKeyBindingJWT(PrivateKey holderKey, String audience, String nonce, String sdJwtString) throws SDJWTException {
     String sdHash = calculateSdHash(sdJwtString);
-    
+
     return new KeyBindingJWTBuilder(holderKey)
         .audience(audience)
         .nonce(nonce)
@@ -169,7 +162,7 @@ public class KeyBindingJWTBuilder {
    * Calculate SHA-256 hash of SD-JWT string for sd_hash claim.
    * According to IETF SD-JWT specification, this ensures the Key Binding JWT
    * is cryptographically bound to the specific SD-JWT presentation.
-   * 
+   *
    * @param sdJwtString SD-JWT string (credential + disclosures, ending with ~)
    * @return Base64URL-encoded SHA-256 hash
    */

@@ -5,9 +5,7 @@ import com.example.oid4vc.sdjwt.dto.DCQLQuery;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.nimbusds.jose.JOSEException;
 import com.example.oid4vc.sdjwt.exception.SDJWTException;
-import lombok.extern.slf4j.Slf4j;
 
 import java.security.PrivateKey;
 import java.util.*;
@@ -20,7 +18,6 @@ import java.util.*;
  * @version 1.0
  * @since 1.0
  */
-@Slf4j
 public class DCQLVPTokenGenerator {
 
   private static final ObjectMapper objectMapper = new ObjectMapper();
@@ -43,7 +40,6 @@ public class DCQLVPTokenGenerator {
       String audience,
       String nonce) {
     try {
-      log.debug("Generating VP token from DCQL for credential: {}", credentialId);
 
       // DCQL에서 요청된 클레임 추출
       Set<String> requestedClaims = DCQLClaimsExtractor.extractClaimsForCredential(dcqlQuery, credentialId);
@@ -56,10 +52,8 @@ public class DCQLVPTokenGenerator {
       return wrapSingleCredentialVPToken(credentialId, vpTokenString);
 
     } catch (SDJWTException e) {
-      log.error("JOSE error during DCQL VP token generation", e);
       throw new RuntimeException("Key binding JWT creation failed: " + e.getMessage(), e);
     } catch (Exception e) {
-      log.error("Failed to generate VP token from DCQL", e);
       throw new RuntimeException("DCQL VP token generation failed", e);
     }
   }
@@ -80,7 +74,6 @@ public class DCQLVPTokenGenerator {
       String audience,
       String nonce) {
     try {
-      log.info("Generating VP tokens for {} credentials from DCQL", credentials.size());
 
       Map<String, String> vpTokenMap = new HashMap<>();
 
@@ -94,7 +87,6 @@ public class DCQLVPTokenGenerator {
           vpTokenMap.put(credentialId, vpTokenString);
 
         } catch (Exception e) {
-          log.error("Failed to generate VP token for credential {}", credentialId, e);
           // 개별 실패는 로그만 남기고 계속 진행
         }
       }
@@ -106,7 +98,6 @@ public class DCQLVPTokenGenerator {
       return combineMultipleVPTokens(vpTokenMap);
 
     } catch (Exception e) {
-      log.error("Failed to generate multiple VP tokens from DCQL", e);
       throw new RuntimeException("Multiple VP token generation failed", e);
     }
   }
@@ -128,7 +119,6 @@ public class DCQLVPTokenGenerator {
       String audience,
       String nonce) {
     try {
-      log.debug("Generating VP token from credential sets");
 
       if (dcqlQuery.getCredentialSets() == null || dcqlQuery.getCredentialSets().isEmpty()) {
         // credential_sets가 없으면 일반 처리
@@ -145,7 +135,6 @@ public class DCQLVPTokenGenerator {
                 .allMatch(credentials::containsKey);
 
             if (allAvailable) {
-              log.info("Selected credential set option with {} credentials", option.size());
 
               Map<String, String> selectedCredentials = new HashMap<>();
               for (String credentialId : option) {
@@ -162,7 +151,6 @@ public class DCQLVPTokenGenerator {
       throw new RuntimeException("No credential set options can be satisfied");
 
     } catch (Exception e) {
-      log.error("Failed to generate VP token from credential sets", e);
       throw new RuntimeException("Credential sets VP token generation failed", e);
     }
   }
@@ -189,7 +177,6 @@ public class DCQLVPTokenGenerator {
       String audience,
       String nonce) {
 
-    log.debug("Generating VP token by format: {} for credential: {}", format, credentialId);
 
     switch (format.toLowerCase()) {
       case "dc+sd-jwt":
@@ -229,7 +216,6 @@ public class DCQLVPTokenGenerator {
     presentations.add(vpTokenString);
     vpToken.set(credentialId, presentations);
 
-    log.debug("Wrapped single credential VP token for: {}", credentialId);
     return objectMapper.writeValueAsString(vpToken);
   }
 
@@ -251,7 +237,6 @@ public class DCQLVPTokenGenerator {
       combinedVpToken.set(credentialId, presentations);
     }
 
-    log.info("Combined {} VP tokens into single response", vpTokenMap.size());
     return objectMapper.writeValueAsString(combinedVpToken);
   }
 
@@ -274,7 +259,6 @@ public class DCQLVPTokenGenerator {
       String audience,
       String nonce) throws Exception {
     try {
-      log.debug("Generating multiple presentations for credential: {}", credentialId);
 
       List<String> vpTokenStrings = OID4VPHandler.createMultipleVPTokens(
           sdJwtVC, claimSets, holderKey, audience, nonce);
@@ -288,11 +272,9 @@ public class DCQLVPTokenGenerator {
 
       vpToken.set(credentialId, presentations);
 
-      log.info("Generated {} presentations for credential: {}", vpTokenStrings.size(), credentialId);
       return objectMapper.writeValueAsString(vpToken);
 
     } catch (SDJWTException e) {
-      log.error("SD-JWT error during multiple presentations generation", e);
       throw new RuntimeException("Multiple presentations generation failed: " + e.getMessage(), e);
     }
   }
@@ -337,7 +319,6 @@ public class DCQLVPTokenGenerator {
           .build();
 
     } catch (Exception e) {
-      log.error("Failed to generate VP token with stats", e);
       return DCQLVPTokenResult.builder()
           .success(false)
           .error(e.getMessage())

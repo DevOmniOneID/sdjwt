@@ -5,7 +5,6 @@ import com.example.oid4vc.sdjwt.core.SDJWT;
 import com.example.oid4vc.sdjwt.dcql.DCQLClaimsExtractor;
 import com.example.oid4vc.sdjwt.dcql.DCQLPathProcessor;
 import com.example.oid4vc.sdjwt.dto.DCQLQuery;
-import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -18,7 +17,6 @@ import java.util.stream.Collectors;
  * @version 1.0
  * @since 1.0
  */
-@Slf4j
 public class SelectiveDisclosureProcessor {
 
   /**
@@ -31,7 +29,6 @@ public class SelectiveDisclosureProcessor {
    */
   public static SDJWT processSelectiveDisclosure(String originalSDJWT, DCQLQuery dcqlQuery, String credentialId) {
     if (originalSDJWT == null || dcqlQuery == null || credentialId == null) {
-      log.warn("Invalid parameters for selective disclosure processing");
       return null;
     }
 
@@ -43,20 +40,16 @@ public class SelectiveDisclosureProcessor {
       Set<String> requestedClaims = DCQLClaimsExtractor.extractClaimsForCredential(dcqlQuery, credentialId);
 
       if (requestedClaims.isEmpty()) {
-        log.info("No specific claims requested for credential {}, returning minimal disclosure", credentialId);
         return new SDJWT(sdjwt.getCredentialJwt(), Collections.emptyList());
       }
 
       // 3. 선택적 공개 필터링
       List<Disclosure> filteredDisclosures = filterDisclosures(sdjwt.getDisclosures(), requestedClaims);
 
-      log.info("Processed selective disclosure for credential {}: {} out of {} disclosures selected",
-          credentialId, filteredDisclosures.size(), sdjwt.getDisclosures().size());
 
       return new SDJWT(sdjwt.getCredentialJwt(), filteredDisclosures);
 
     } catch (Exception e) {
-      log.error("Failed to process selective disclosure for credential {}", credentialId, e);
       throw new RuntimeException("Selective disclosure processing failed", e);
     }
   }
@@ -74,7 +67,6 @@ public class SelectiveDisclosureProcessor {
     }
 
     if (requestedClaims == null || requestedClaims.isEmpty()) {
-      log.debug("No claims requested, returning empty disclosure list");
       return Collections.emptyList();
     }
 
@@ -83,15 +75,11 @@ public class SelectiveDisclosureProcessor {
           String claimName = disclosure.getClaimName();
           boolean isRequested = isClaimRequested(claimName, requestedClaims);
 
-          log.debug("Disclosure for claim '{}': {} (requested: {})",
-              claimName, isRequested ? "INCLUDED" : "EXCLUDED", isRequested);
 
           return isRequested;
         })
         .collect(Collectors.toList());
 
-    log.debug("Filtered disclosures: {} out of {} selected",
-        filteredDisclosures.size(), disclosures.size());
 
     return filteredDisclosures;
   }
@@ -119,8 +107,6 @@ public class SelectiveDisclosureProcessor {
       nestedDisclosures.addAll(matchingDisclosures);
     }
 
-    log.debug("Processed {} nested claims, found {} matching disclosures",
-        nestedPaths.size(), nestedDisclosures.size());
 
     return nestedDisclosures;
   }
@@ -149,8 +135,6 @@ public class SelectiveDisclosureProcessor {
       arrayDisclosures.addAll(arrayElementDisclosures);
     }
 
-    log.debug("Processed {} array selections, found {} array element disclosures",
-        arraySelections.size(), arrayDisclosures.size());
 
     return arrayDisclosures;
   }
@@ -173,7 +157,6 @@ public class SelectiveDisclosureProcessor {
       List<Disclosure> groupDisclosures = filterDisclosures(sdjwt.getDisclosures(), claimGroup);
 
       if (areAllClaimsAvailable(claimGroup, groupDisclosures)) {
-        log.info("Selected claim group with {} claims (fully satisfiable)", claimGroup.size());
         return groupDisclosures;
       }
     }
@@ -185,8 +168,6 @@ public class SelectiveDisclosureProcessor {
         .orElse(Collections.emptySet());
 
     List<Disclosure> bestDisclosures = filterDisclosures(sdjwt.getDisclosures(), bestGroup);
-    log.info("Selected best available claim group with {}/{} satisfiable claims",
-        bestDisclosures.size(), bestGroup.size());
 
     return bestDisclosures;
   }
