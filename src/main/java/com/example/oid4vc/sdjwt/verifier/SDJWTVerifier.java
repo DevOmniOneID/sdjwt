@@ -11,6 +11,10 @@ import com.example.oid4vc.sdjwt.util.HashUtils;
 import com.example.oid4vc.sdjwt.validation.SDJWTValidator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import java.security.interfaces.ECPublicKey;
 import java.security.interfaces.RSAPublicKey;
@@ -105,7 +109,7 @@ public class SDJWTVerifier {
         }
 
         if (sdJwt.hasKeyBindingJwt()) {
-          verifyKeyBindingJWT(sdJwt.getKeyBindingJwt(), expectedAudience, expectedNonce);
+          verifyKeyBindingJWT(sdJwt, expectedAudience, expectedNonce, sdJwtString);
         }
       }
 
@@ -144,11 +148,11 @@ public class SDJWTVerifier {
   }
 
   /**
-   * Verify key binding JWT.
+   * Verify key binding JWT with sd_hash validation.
    */
-  private void verifyKeyBindingJWT(String keyBindingJwt, String expectedAudience, String expectedNonce) throws SDJWTException {
+  private void verifyKeyBindingJWT(SDJWT sdJwt, String expectedAudience, String expectedNonce, String originalSdJwtString) throws SDJWTException {
     try {
-      SignedJWT kbJwt = SignedJWT.parse(keyBindingJwt);
+      SignedJWT kbJwt = SignedJWT.parse(sdJwt.getKeyBindingJwt());
 
       // Verify signature with holder's public key
       PublicKey kbPublicKey = holderPublicKey != null ? holderPublicKey : extractHolderPublicKey();
@@ -187,10 +191,115 @@ public class SDJWTVerifier {
         }
       }
 
+      // CRITICAL: Verify sd_hash according to IETF SD-JWT specification
+      verifySdHash(kbClaims, originalSdJwtString);
+
     } catch (ParseException e) {
       throw new SDJWTException("Failed to parse key binding JWT", e);
     } catch (Exception e) {
       throw new SDJWTException("Key binding JWT verification failed", e);
+    }
+  }
+
+  /**
+   * Simple sd_hash verification for VP tokens.
+   */
+  private void verifySdHash(Map<String, Object> kbClaims, String originalSdJwtString) throws SDJWTException {
+    Object sdHashClaim = kbClaims.get("sd_hash");
+    if (sdHashClaim == null) {
+      throw new SDJWTException("Key binding JWT missing required sd_hash claim");
+    }
+
+    if (!(sdHashClaim instanceof String)) {
+      throw new SDJWTException("sd_hash claim must be a string");
+    }
+
+    String expectedSdHash = (String) sdHashClaim;
+    
+    // Extract SD-JWT part (without Key Binding JWT)
+    String[] parts = originalSdJwtString.split("~", -1);
+    StringBuilder sdJwtForHash = new StringBuilder();
+    for (int i = 0; i < parts.length - 1; i++) {
+      sdJwtForHash.append(parts[i]).append("~");
+    }
+
+    // Calculate hash
+    String calculatedSdHash = calculateSHA256Hash(sdJwtForHash.toString());
+
+    if (!expectedSdHash.equals(calculatedSdHash)) {
+      throw new SDJWTException(
+          String.format("sd_hash verification failed. Expected: %s, Calculated: %s", 
+              expectedSdHash, calculatedSdHash));
+    }
+  }
+
+  /**
+   * Calculate SHA-256 hash and return as base64url-encoded string.
+   */
+  private String calculateSHA256Hash(String input) {
+    try {
+      MessageDigest digest = MessageDigest.getInstance("SHA-256");
+      byte[] hash = digest.digest(input.getBytes(StandardCharsets.UTF_8));
+      return java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(hash);
+    } catch (NoSuchAlgorithmException e) {
+      throw new RuntimeException("SHA-256 algorithm not available", e);
+    }
+  }
+
+  /**
+   * Public method to verify only sd_hash for VP tokens.
+   * Use this if you want to verify sd_hash separately from full JWT verification.
+   */
+  public static void verifySdHashOnly(String vpTokenString) throws SDJWTException {
+    if (vpTokenString == null || vpTokenString.trim().isEmpty()) {
+      throw new SDJWTException("VP token string cannot be null or empty");
+    }
+
+    try {
+      SDJWT sdjwt = SDJWT.parse(vpTokenString);
+      
+      if (!sdjwt.hasKeyBindingJwt()) {
+        throw new SDJWTException("VP token must have Key Binding JWT for sd_hash verification");
+      }
+
+      SignedJWT kbJwt = SignedJWT.parse(sdjwt.getKeyBindingJwt());
+      Map<String, Object> kbClaims = kbJwt.getJWTClaimsSet();
+      
+      Object sdHashClaim = kbClaims.get("sd_hash");
+      if (sdHashClaim == null) {
+        throw new SDJWTException("Key Binding JWT missing required sd_hash claim");
+      }
+      
+      if (!(sdHashClaim instanceof String)) {
+        throw new SDJWTException("sd_hash claim must be a string");
+      }
+      
+      String expectedSdHash = (String) sdHashClaim;
+      
+      // Extract SD-JWT part (without Key Binding JWT)
+      String[] parts = vpTokenString.split("~", -1);
+      StringBuilder sdJwtForHash = new StringBuilder();
+      for (int i = 0; i < parts.length - 1; i++) {
+        sdJwtForHash.append(parts[i]).append("~");
+      }
+
+      // Calculate hash
+      MessageDigest digest = MessageDigest.getInstance("SHA-256");
+      byte[] hash = digest.digest(sdJwtForHash.toString().getBytes(StandardCharsets.UTF_8));
+      String calculatedSdHash = java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(hash);
+
+      if (!expectedSdHash.equals(calculatedSdHash)) {
+        throw new SDJWTException(
+            String.format("sd_hash verification failed. Expected: %s, Calculated: %s", 
+                expectedSdHash, calculatedSdHash));
+      }
+
+    } catch (ParseException e) {
+      throw new SDJWTException("Failed to parse VP token for sd_hash verification", e);
+    } catch (NoSuchAlgorithmException e) {
+      throw new RuntimeException("SHA-256 algorithm not available", e);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
     }
   }
 
