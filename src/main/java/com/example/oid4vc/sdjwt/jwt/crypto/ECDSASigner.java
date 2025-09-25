@@ -60,8 +60,40 @@ public class ECDSASigner implements JWSSigner {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             byte[] hashedInput = digest.digest(signingInput.getBytes(StandardCharsets.UTF_8));
 
-            // Sign using wallet manager - it returns compact signature in IEEE P1363 format
-            return walletManager.generateCompactSignatureFromHash(keyId, hashedInput);
+            // Sign using wallet manager - it returns DER format signature
+            byte[] signature = walletManager.generateCompactSignatureFromHash(keyId, hashedInput);
+            
+            // Debug: Print signature information
+            System.out.println("=== WalletManager Signature Debug ===");
+            System.out.println("Signature length: " + signature.length);
+            System.out.println("First 10 bytes: " + java.util.Arrays.toString(java.util.Arrays.copyOf(signature, Math.min(10, signature.length))));
+            if (signature.length > 0) {
+                System.out.println("First byte (hex): 0x" + String.format("%02x", signature[0]));
+            }
+            
+            // Check if it's already IEEE P1363 format (64 bytes)
+            if (signature.length == 64) {
+                System.out.println("Already in IEEE P1363 format (64 bytes)");
+                return signature;
+            } 
+            // Check if it's 65 bytes with 0x20 prefix (modified P1363 format)
+            else if (signature.length == 65 && signature[0] == 0x20) {
+                System.out.println("Detected 65-byte signature with 0x20 prefix - extracting 64-byte P1363");
+                byte[] p1363Signature = new byte[64];
+                System.arraycopy(signature, 1, p1363Signature, 0, 64); // Skip first byte
+                return p1363Signature;
+            }
+            // Check if it's DER format (starts with 0x30)
+            else if (signature.length > 6 && signature[0] == 0x30) {
+                System.out.println("Converting from DER format to IEEE P1363");
+                return convertDERToP1363(signature);
+            }
+            // Unknown format
+            else {
+                System.out.println("Unknown signature format - trying as-is");
+                throw new Exception("Unsupported signature format. Length: " + signature.length + 
+                                  ", First byte: 0x" + String.format("%02x", signature[0]));
+            }
             
         } catch (WalletException e) {
             throw new Exception("Failed to sign with wallet manager", e);
