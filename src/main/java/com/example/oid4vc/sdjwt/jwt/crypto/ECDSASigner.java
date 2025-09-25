@@ -1,20 +1,77 @@
 package com.example.oid4vc.sdjwt.jwt.crypto;
 
 import com.example.oid4vc.sdjwt.jwt.JWSSigner;
+import org.omnione.did.wallet.key.WalletManagerInterface;
+import org.omnione.did.wallet.exception.WalletException;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.security.Signature;
 import java.security.interfaces.ECPrivateKey;
 
 public class ECDSASigner implements JWSSigner {
 
     private final ECPrivateKey privateKey;
+    private final WalletManagerInterface walletManager;
+    private final String keyId;
 
+    /**
+     * Create ECDSASigner with ECPrivateKey (existing constructor).
+     */
     public ECDSASigner(ECPrivateKey privateKey) {
         this.privateKey = privateKey;
+        this.walletManager = null;
+        this.keyId = null;
+    }
+
+    /**
+     * Create ECDSASigner with WalletManagerInterface.
+     */
+    public ECDSASigner(WalletManagerInterface walletManager, String keyId) {
+        if (walletManager == null) {
+            throw new IllegalArgumentException("Wallet manager cannot be null");
+        }
+        if (keyId == null || keyId.trim().isEmpty()) {
+            throw new IllegalArgumentException("Key ID cannot be null or empty");
+        }
+        
+        this.privateKey = null;
+        this.walletManager = walletManager;
+        this.keyId = keyId;
     }
 
     @Override
     public byte[] sign(String signingInput) throws Exception {
+        if (walletManager != null) {
+            // Use WalletManager for signing
+            return signWithWalletManager(signingInput);
+        } else {
+            // Use PrivateKey for signing (existing logic)
+            return signWithPrivateKey(signingInput);
+        }
+    }
+
+    /**
+     * Sign using WalletManager.
+     */
+    private byte[] signWithWalletManager(String signingInput) throws Exception {
+        try {
+            // Hash the signing input with SHA-256
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hashedInput = digest.digest(signingInput.getBytes(StandardCharsets.UTF_8));
+
+            // Sign using wallet manager - it returns compact signature in IEEE P1363 format
+            return walletManager.generateCompactSignatureFromHash(keyId, hashedInput);
+            
+        } catch (WalletException e) {
+            throw new Exception("Failed to sign with wallet manager", e);
+        }
+    }
+
+    /**
+     * Sign using ECPrivateKey (existing logic).
+     */
+    private byte[] signWithPrivateKey(String signingInput) throws Exception {
         Signature signature = Signature.getInstance("SHA256withECDSA");
         signature.initSign(privateKey);
         signature.update(signingInput.getBytes());

@@ -9,7 +9,11 @@ import com.example.oid4vc.sdjwt.jwt.crypto.ECDSASigner;
 import com.example.oid4vc.sdjwt.jwt.crypto.RSASSASigner;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.omnione.did.wallet.key.WalletManagerInterface;
+import org.omnione.did.wallet.exception.WalletException;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.interfaces.ECPrivateKey;
@@ -29,10 +33,12 @@ import java.util.Map;
 public class OID4VCIssuer {
 
   private final PrivateKey issuerPrivateKey;
+  private final WalletManagerInterface walletManager;
+  private final String keyId;
   private final String issuerId;
 
   /**
-   * Create a new OID4VC issuer.
+   * Create a new OID4VC issuer with PrivateKey.
    */
   public OID4VCIssuer(PrivateKey issuerPrivateKey, String issuerId) {
     if (issuerPrivateKey == null) {
@@ -43,6 +49,28 @@ public class OID4VCIssuer {
     }
 
     this.issuerPrivateKey = issuerPrivateKey;
+    this.walletManager = null;
+    this.keyId = null;
+    this.issuerId = issuerId;
+  }
+
+  /**
+   * Create a new OID4VC issuer with WalletManagerInterface.
+   */
+  public OID4VCIssuer(WalletManagerInterface walletManager, String keyId, String issuerId) {
+    if (walletManager == null) {
+      throw new IllegalArgumentException("Wallet manager cannot be null");
+    }
+    if (keyId == null || keyId.trim().isEmpty()) {
+      throw new IllegalArgumentException("Key ID cannot be null or empty");
+    }
+    if (issuerId == null || issuerId.trim().isEmpty()) {
+      throw new IllegalArgumentException("Issuer ID cannot be null or empty");
+    }
+
+    this.issuerPrivateKey = null;
+    this.walletManager = walletManager;
+    this.keyId = keyId;
     this.issuerId = issuerId;
   }
 
@@ -116,22 +144,44 @@ public class OID4VCIssuer {
   }
 
   /**
-   * Sign JWT with the issuer's private key.
+   * Sign JWT with the issuer's private key or wallet manager.
    */
   private String signJWT(String payloadJson) {
     try {
-      // Determine algorithm and create signer
+      if (walletManager != null) {
+        // Use WalletManager for signing
+        return signJWTWithWalletManager(payloadJson);
+      } else {
+        // Use PrivateKey for signing (existing logic)
+        return signJWTWithPrivateKey(payloadJson);
+      }
+    } catch (Exception e) {
+      throw new SDJWTException("Failed to sign JWT", e);
+    }
+  }
+
+  /**
+   * Sign JWT using WalletManager.
+   */
+  private String signJWTWithWalletManager(String payloadJson) throws Exception {
+    try {
+      // Get algorithm from wallet manager
+      String keyAlgorithm = walletManager.getKeyAlgorithm(keyId);
       String algorithm;
       JWSSigner signer;
-
-      if (issuerPrivateKey instanceof RSAPrivateKey) {
+      
+      // Determine JWS algorithm and create signer based on key algorithm
+      if (keyAlgorithm.contains("RSA")) {
         algorithm = "RS256";
-        signer = new RSASSASigner((RSAPrivateKey) issuerPrivateKey);
-      } else if (issuerPrivateKey instanceof ECPrivateKey) {
-        algorithm = "ES256";
-        signer = new ECDSASigner((ECPrivateKey) issuerPrivateKey);
+        // Note: RSASSASigner with WalletManager constructor would be needed
+        throw new IllegalArgumentException("RSA with WalletManager not yet implemented");
+      } else if (keyAlgorithm.contains("Secp256r1") || keyAlgorithm.contains("SECP256r1") || 
+                 keyAlgorithm.contains("Secp256k1") || keyAlgorithm.contains("SECP256k1") || 
+                 keyAlgorithm.contains("EC")) {
+        algorithm = keyAlgorithm.contains("Secp256k1") || keyAlgorithm.contains("SECP256k1") ? "ES256K" : "ES256";
+        signer = new ECDSASigner(walletManager, keyId);
       } else {
-        throw new IllegalArgumentException("Unsupported private key type");
+        throw new IllegalArgumentException("Unsupported key algorithm: " + keyAlgorithm);
       }
 
       // Create header
@@ -142,14 +192,47 @@ public class OID4VCIssuer {
       // Parse payload
       Map<String, Object> payloadMap = new ObjectMapper().readValue(payloadJson, new TypeReference<Map<String, Object>>() {});
 
-      // Create and sign JWT
+      // Create and sign JWT using the signer
       SignedJWT signedJWT = new SignedJWT(header, payloadMap);
       signedJWT.sign(signer);
 
       return signedJWT.serialize();
 
-    } catch (Exception e) {
-      throw new SDJWTException("Failed to sign JWT", e);
+    } catch (WalletException e) {
+      throw new SDJWTException("Failed to sign with wallet manager", e);
     }
+  }
+
+  /**
+   * Sign JWT using PrivateKey (existing logic).
+   */
+  private String signJWTWithPrivateKey(String payloadJson) throws Exception {
+    // Determine algorithm and create signer
+    String algorithm;
+    JWSSigner signer;
+
+    if (issuerPrivateKey instanceof RSAPrivateKey) {
+      algorithm = "RS256";
+      signer = new RSASSASigner((RSAPrivateKey) issuerPrivateKey);
+    } else if (issuerPrivateKey instanceof ECPrivateKey) {
+      algorithm = "ES256";
+      signer = new ECDSASigner((ECPrivateKey) issuerPrivateKey);
+    } else {
+      throw new IllegalArgumentException("Unsupported private key type");
+    }
+
+    // Create header
+    Map<String, Object> header = new HashMap<>();
+    header.put("alg", algorithm);
+    header.put("typ", "vc+sd-jwt");
+
+    // Parse payload
+    Map<String, Object> payloadMap = new ObjectMapper().readValue(payloadJson, new TypeReference<Map<String, Object>>() {});
+
+    // Create and sign JWT
+    SignedJWT signedJWT = new SignedJWT(header, payloadMap);
+    signedJWT.sign(signer);
+
+    return signedJWT.serialize();
   }
 }
