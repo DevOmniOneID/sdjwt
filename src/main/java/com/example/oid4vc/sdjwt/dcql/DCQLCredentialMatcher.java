@@ -711,6 +711,127 @@ public class DCQLCredentialMatcher {
   }
 
   /**
+   * SD-JWT의 실제 값이 DCQL 조건에 맞는 클레임만 추출 (새로 추가)
+   *
+   * @param dcqlQuery DCQL 쿼리 객체
+   * @param sdjwt SD-JWT 객체
+   * @return 조건에 맞는 클레임명 집합
+   */
+  public static Set<String> extractMatchingClaimNames(DCQLQuery dcqlQuery, SDJWT sdjwt) {
+    if (dcqlQuery == null || dcqlQuery.getCredentials() == null || sdjwt == null) {
+      return Collections.emptySet();
+    }
+
+    Set<String> matchingClaims = new HashSet<>();
+
+    // SD-JWT에서 실제 클레임 값들 추출
+    Map<String, Object> actualValues = extractClaimValues(sdjwt);
+
+    dcqlQuery.getCredentials().forEach(credential -> {
+      if (credential.getClaims() != null) {
+        credential.getClaims().forEach(claimQuery -> {
+          String claimName = DCQLPathProcessor.pathToClaimName(claimQuery.getPath());
+          if (claimName != null && meetsClaimConditions(claimQuery, actualValues.get(claimName))) {
+            matchingClaims.add(claimName);
+            System.out.println("조건 만족 클레임 추가: " + claimName + "=" + actualValues.get(claimName));
+          } else {
+            System.out.println("조건 불만족 클레임 제외: " + claimName + "=" + actualValues.get(claimName));
+          }
+        });
+      }
+    });
+
+    return matchingClaims;
+  }
+
+  /**
+   * 특정 클레임이 DCQL 조건을 만족하는지 확인
+   */
+  private static boolean meetsClaimConditions(DCQLQuery.ClaimQuery claimQuery, Object actualValue) {
+    if (actualValue == null) {
+      return false; // 값이 없으면 조건 불만족
+    }
+
+    // 1. values 조건 확인 (허용된 값들)
+    if (claimQuery.getValues() != null && !claimQuery.getValues().isEmpty()) {
+      boolean valueMatches = claimQuery.getValues().contains(actualValue);
+      System.out.println("  values 조건: " + actualValue + " in " + claimQuery.getValues() + " = " + valueMatches);
+      if (!valueMatches) {
+        return false;
+      }
+    }
+
+    // 2. value 조건 확인 (정확한 값)
+    if (claimQuery.getValue() != null) {
+      boolean exactMatch = claimQuery.getValue().equals(actualValue);
+      System.out.println("  value 조건: " + actualValue + " == " + claimQuery.getValue() + " = " + exactMatch);
+      if (!exactMatch) {
+        return false;
+      }
+    }
+
+    // 3. min 조건 확인
+    if (claimQuery.getMin() != null) {
+      if (!checkMinCondition(actualValue, claimQuery.getMin())) {
+        return false;
+      }
+    }
+
+    // 4. max 조건 확인
+    if (claimQuery.getMax() != null) {
+      if (!checkMaxCondition(actualValue, claimQuery.getMax())) {
+        return false;
+      }
+    }
+
+    return true; // 모든 조건 만족
+  }
+
+  /**
+   * 최솟값 조건 확인
+   */
+  private static boolean checkMinCondition(Object actualValue, Object minValue) {
+    try {
+      if (actualValue instanceof Number && minValue instanceof Number) {
+        double actual = ((Number) actualValue).doubleValue();
+        double min = ((Number) minValue).doubleValue();
+        return actual >= min;
+      }
+
+      if (actualValue instanceof String && minValue instanceof String) {
+        return ((String) actualValue).compareTo((String) minValue) >= 0;
+      }
+
+      return true; // 비교 불가능한 경우 통과
+
+    } catch (Exception e) {
+      return false;
+    }
+  }
+
+  /**
+   * 최댓값 조건 확인
+   */
+  private static boolean checkMaxCondition(Object actualValue, Object maxValue) {
+    try {
+      if (actualValue instanceof Number && maxValue instanceof Number) {
+        double actual = ((Number) actualValue).doubleValue();
+        double max = ((Number) maxValue).doubleValue();
+        return actual <= max;
+      }
+
+      if (actualValue instanceof String && maxValue instanceof String) {
+        return ((String) actualValue).compareTo((String) maxValue) <= 0;
+      }
+
+      return true; // 비교 불가능한 경우 통과
+
+    } catch (Exception e) {
+      return false;
+    }
+  }
+
+  /**
    * 클레임 사용 가능성 정보
    */
   public static class ClaimAvailability {
