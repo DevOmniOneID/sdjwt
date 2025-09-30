@@ -88,6 +88,11 @@ public class ECDSASigner implements JWSSigner {
                 System.out.println("Converting from DER format to IEEE P1363");
                 return convertDERToP1363(signature);
             }
+            else if (signature.length == 65 && (signature[0] & 0xFF) == 0x1f) {
+              byte[] trimmed = new byte[64];
+              System.arraycopy(signature, 1, trimmed, 0, 64);
+              return trimmed;
+            }
             // Unknown format
             else {
                 System.out.println("Unknown signature format - trying as-is");
