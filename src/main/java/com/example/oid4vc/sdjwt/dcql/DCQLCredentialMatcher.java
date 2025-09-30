@@ -207,7 +207,7 @@ public class DCQLCredentialMatcher {
   /**
    * 포맷 매칭 확인 (완전 구현)
    */
-  private static boolean matchesFormat(String requiredFormat) {
+  public static boolean matchesFormat(String requiredFormat) {
     if (requiredFormat == null) {
       return true; // 포맷 요구사항 없음
     }
@@ -232,7 +232,7 @@ public class DCQLCredentialMatcher {
   /**
    * 메타데이터 매칭 확인 (완전 구현)
    */
-  private static boolean matchesMetadata(SDJWT sdjwt, Map<String, Object> metadata) {
+  public static boolean matchesMetadata(SDJWT sdjwt, Map<String, Object> metadata) {
     if (metadata == null || metadata.isEmpty()) {
       return true; // 메타데이터 요구사항 없음
     }
