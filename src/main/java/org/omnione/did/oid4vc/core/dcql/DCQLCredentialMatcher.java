@@ -523,7 +523,7 @@ public class DCQLCredentialMatcher {
   }
 
   /**
-   * SD-JWT에서 실제 클레임 값들 추출
+   * SD-JWT에서 실제 클레임 값들 추출 (중첩 경로 지원)
    */
   private static Map<String, Object> extractClaimValues(SDJWT sdjwt) {
     Map<String, Object> claimValues = new HashMap<>();
@@ -531,7 +531,16 @@ public class DCQLCredentialMatcher {
     // 1. Disclosures에서 값 추출
     if (sdjwt.getDisclosures() != null) {
       for (var disclosure : sdjwt.getDisclosures()) {
-        claimValues.put(disclosure.getClaimName(), disclosure.getClaimValue());
+        String claimName = disclosure.getClaimName();
+        Object claimValue = disclosure.getClaimValue();
+
+        // 평면적인 클레임 추가
+        claimValues.put(claimName, claimValue);
+
+        // 중첩된 객체인 경우 하위 경로들도 추가
+        if (claimValue instanceof Map) {
+          extractNestedClaims(claimName, (Map<String, Object>) claimValue, claimValues);
+        }
       }
     }
 
@@ -542,13 +551,48 @@ public class DCQLCredentialMatcher {
 
       payload.entrySet().stream()
           .filter(entry -> !isReservedJWTClaim(entry.getKey()))
-          .forEach(entry -> claimValues.put(entry.getKey(), entry.getValue()));
+          .forEach(entry -> {
+            String key = entry.getKey();
+            Object value = entry.getValue();
+
+            // 평면적인 클레임 추가
+            claimValues.put(key, value);
+
+            // 중첩된 객체인 경우 하위 경로들도 추가
+            if (value instanceof Map) {
+              extractNestedClaims(key, (Map<String, Object>) value, claimValues);
+            }
+          });
 
     } catch (Exception e) {
       System.err.println("JWT 페이로드에서 클레임 값 추출 실패: " + e.getMessage());
     }
 
     return claimValues;
+  }
+
+  /**
+   * 중첩된 클레임 값들을 재귀적으로 추출
+   * 예: address.country, address.city 등
+   */
+  private static void extractNestedClaims(String parentPath, Map<String, Object> nestedMap, Map<String, Object> claimValues) {
+    if (nestedMap == null) {
+      return;
+    }
+
+    for (Map.Entry<String, Object> entry : nestedMap.entrySet()) {
+      String nestedKey = entry.getKey();
+      Object nestedValue = entry.getValue();
+      String fullPath = parentPath + "." + nestedKey;
+
+      // 중첩된 경로로 값 추가
+      claimValues.put(fullPath, nestedValue);
+
+      // 더 깊은 중첩이 있는 경우 재귀 호출
+      if (nestedValue instanceof Map) {
+        extractNestedClaims(fullPath, (Map<String, Object>) nestedValue, claimValues);
+      }
+    }
   }
 
   /**
