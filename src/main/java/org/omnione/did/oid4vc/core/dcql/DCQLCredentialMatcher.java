@@ -755,7 +755,8 @@ public class DCQLCredentialMatcher {
   }
 
   /**
-   * SD-JWT의 실제 값이 DCQL 조건에 맞는 클레임만 추출 (새로 추가)
+   * SD-JWT의 실제 값이 DCQL 조건에 맞는 클레임만 추출
+   * credential의 claims가 null이면 모든 클레임을 추출 (OpenID4VP 표준)
    *
    * @param dcqlQuery DCQL 쿼리 객체
    * @param sdjwt SD-JWT 객체
@@ -772,17 +773,29 @@ public class DCQLCredentialMatcher {
     Map<String, Object> actualValues = extractClaimValues(sdjwt);
 
     dcqlQuery.getCredentials().forEach(credential -> {
-      if (credential.getClaims() != null) {
-        credential.getClaims().forEach(claimQuery -> {
-          String claimName = DCQLPathProcessor.pathToClaimName(claimQuery.getPath());
-          if (claimName != null && meetsClaimConditions(claimQuery, actualValues.get(claimName))) {
-            matchingClaims.add(claimName);
-            System.out.println("조건 만족 클레임 추가: " + claimName + "=" + actualValues.get(claimName));
-          } else {
-            System.out.println("조건 불만족 클레임 제외: " + claimName + "=" + actualValues.get(claimName));
-          }
-        });
+      // credential의 claims이 null이면 모든 클레임을 포함 (표준 동작)
+      if (credential.getClaims() == null) {
+        matchingClaims.addAll(actualValues.keySet());
+        System.out.println("credential.claims이 null이므로 모든 클레임 포함: " + actualValues.keySet());
+        return;
       }
+
+      // claims이 빈 리스트이면 아무 클레임도 포함하지 않음
+      if (credential.getClaims().isEmpty()) {
+        System.out.println("credential.claims이 비어있으므로 클레임 제외");
+        return;
+      }
+
+      // claims에 구체적인 요청이 있으면 조건 검증
+      credential.getClaims().forEach(claimQuery -> {
+        String claimName = DCQLPathProcessor.pathToClaimName(claimQuery.getPath());
+        if (claimName != null && meetsClaimConditions(claimQuery, actualValues.get(claimName))) {
+          matchingClaims.add(claimName);
+          System.out.println("조건 만족 클레임 추가: " + claimName + "=" + actualValues.get(claimName));
+        } else {
+          System.out.println("조건 불만족 클레임 제외: " + claimName + "=" + actualValues.get(claimName));
+        }
+      });
     });
 
     return matchingClaims;
