@@ -90,6 +90,8 @@ public class OID4VPHandler {
     return vpToken;
   }
 
+
+
   /**
    * Create a VP token from DCQL query
    * Enhanced method that processes DCQL query directly
@@ -119,6 +121,86 @@ public class OID4VPHandler {
     }
 
     return createVPToken(sdJwtVC, requestedClaims, holderPrivateKey, audience, nonce);
+  }
+
+
+  /**
+   * Create a VP token with selective disclosure and dcql_id mapping.
+   *
+   * This method creates a VP token that includes only the requested claims
+   * and returns it wrapped in a JSON object with dcql_id as the key.
+   *
+   * @param sdJwtVC Original SD-JWT VC string
+   * @param requestedClaims Set of claim names to disclose (from DCQL claims)
+   * @param dcqlId DCQL ID to use as the key in the response JSON
+   * @param holderPrivateKey Holder's private key for key binding JWT
+   * @param audience Verifier's client ID (bound to key binding JWT)
+   * @param nonce Nonce from authorization request (bound to key binding JWT)
+   * @return JSON string with format: {"dcqlId": ["vpToken"]}
+   * @throws SDJWTException if key binding JWT creation fails
+   */
+  public static String createVPTokenWithDcqlId(String sdJwtVC,
+      Set<String> requestedClaims,
+      String dcqlId,
+      PrivateKey holderPrivateKey,
+      String audience,
+      String nonce) throws SDJWTException {
+
+    // Create the VP token using existing logic
+    String vpToken = createVPToken(sdJwtVC, requestedClaims, holderPrivateKey, audience, nonce);
+
+    // Escape special characters in vpToken for JSON
+    String escapedVpToken = escapeJsonString(vpToken);
+
+    // Build JSON string with dcqlId as key
+    String jsonResponse = "{\"" + escapeJsonString(dcqlId) + "\":[\"" + escapedVpToken + "\"]}";
+
+    return jsonResponse;
+  }
+
+  /**
+   * Escape special characters in string for JSON
+   *
+   * @param str String to escape
+   * @return Escaped string safe for JSON
+   */
+  private static String escapeJsonString(String str) {
+    if (str == null) {
+      return "";
+    }
+    StringBuilder sb = new StringBuilder();
+    for (char c : str.toCharArray()) {
+      switch (c) {
+        case '"':
+          sb.append("\\\"");
+          break;
+        case '\\':
+          sb.append("\\\\");
+          break;
+        case '\b':
+          sb.append("\\b");
+          break;
+        case '\f':
+          sb.append("\\f");
+          break;
+        case '\n':
+          sb.append("\\n");
+          break;
+        case '\r':
+          sb.append("\\r");
+          break;
+        case '\t':
+          sb.append("\\t");
+          break;
+        default:
+          if (c < 32) {
+            sb.append(String.format("\\u%04x", (int) c));
+          } else {
+            sb.append(c);
+          }
+      }
+    }
+    return sb.toString();
   }
 
   /**
